@@ -19,7 +19,7 @@ const comboProductSchema = new mongoose.Schema(
       }
     ],
 
-    comboLimit: {
+    maxComboLimit: {
       type: Number,
     },
 
