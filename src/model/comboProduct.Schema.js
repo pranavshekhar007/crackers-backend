@@ -19,6 +19,10 @@ const comboProductSchema = new mongoose.Schema(
       }
     ],
 
+    comboLimit: {
+      type: Number,
+    },
+
     pricing: {
       actualPrice: {
         type: Number,
