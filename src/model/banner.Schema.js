@@ -9,7 +9,7 @@ const bannerSchema = mongoose.Schema({
   },
   category:{
     type: String,
-    required: true,
+    // required: true,
   },
   status:{
     type: Boolean,
