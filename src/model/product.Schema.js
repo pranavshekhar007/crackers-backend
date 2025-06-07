@@ -34,6 +34,9 @@ const productSchema = mongoose.Schema({
   GTIN: {
     type: Number,
   },
+  specialAppearance: {
+    type: [String],
+  },
 
   shortDescription: {
     type: String,
