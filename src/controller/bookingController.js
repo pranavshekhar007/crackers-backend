@@ -13,9 +13,7 @@ const path = require("path");
 
 bookingController.post("/create", async (req, res) => {
   try {
-    const { userId, totalAmount, product,
-       bookingQuantity, bookingPrice, modeOfPayment,
-         paymentId, signature, addressId, status  } = req.body;
+    const { userId, totalAmount, product, modeOfPayment, paymentId, signature, address, status } = req.body;
 
     // Validate required fields
     if (!userId) {
@@ -29,12 +27,10 @@ bookingController.post("/create", async (req, res) => {
       userId,
       totalAmount,
       product,
-      bookingQuantity,
-      bookingPrice,
       modeOfPayment,
       paymentId,
       signature,
-      addressId,
+      address,
       status,
     };
 
@@ -253,5 +249,46 @@ bookingController.put("/update",async (req, res) => {
     }
   }
 );
+
+bookingController.put("/upload/payment-ss", upload.single("paymentSs"), async (req, res) => {
+    try {
+      const bookingId = req.body.id;
+
+      const booking = await Booking.findById(bookingId);
+      if (!booking) {
+        return sendResponse(res, 404, "Failed", {
+          message: "Booking not found",
+          statusCode: 404,
+        });
+      }
+
+      let updatedData = { ...req.body };
+
+      if (req.file) {
+        const paymentScreenshot = await cloudinary.uploader.upload(req.file.path);
+        updatedData.paymentSs = paymentScreenshot.url;
+      }
+
+      const updatedBooking = await Booking.findByIdAndUpdate(
+        bookingId,
+        updatedData,
+        { new: true }
+      );
+
+      sendResponse(res, 200, "Success", {
+        message: "Payment screenshot uploaded successfully!",
+        data: updatedBooking,
+        statusCode: 200,
+      });
+    } catch (error) {
+      console.error(error);
+      sendResponse(res, 500, "Failed", {
+        message: error.message || "Internal server error",
+        statusCode: 500,
+      });
+    }
+  }
+);
+
 
 module.exports = bookingController;
