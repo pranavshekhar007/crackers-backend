@@ -73,14 +73,14 @@ bookingController.post("/list", async (req, res) => {
     // Fetch the booking list
     const bookingList = await Booking.find(query)
       .populate("userId", "firstName lastName")
-      .populate("addressId")
-      .sort(sortOption)
-      .limit(parseInt(pageCount))
-      .skip(parseInt(pageNo - 1) * parseInt(pageCount))
       .populate({
         path: "product.productId",
         select: "name description productHeroImage",
-      });
+      })
+      .sort(sortOption)
+      .skip(parseInt(pageNo - 1) * parseInt(pageCount))
+      .limit(parseInt(pageCount))
+      
 
     const totalCount = await Booking.countDocuments(query);
 
@@ -93,7 +93,7 @@ bookingController.post("/list", async (req, res) => {
     const statusCountMap = {
       orderPlaced: 0,
       orderPacked: 0,
-      outForDelivery: 0,
+      orderDispatch: 0,
       completed: 0,
       cancelled: 0,
     };
