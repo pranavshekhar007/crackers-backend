@@ -42,7 +42,7 @@ categoryController.post("/list", async (req, res) => {
       searchKey = "",
       status,
       pageNo = 1,
-      pageCount = 20,
+      pageCount = 10,
       sortByField,
       sortByOrder
     } = req.body;
@@ -56,7 +56,7 @@ categoryController.post("/list", async (req, res) => {
       .sort(sortOption)
       .limit(parseInt(pageCount))
       .skip(parseInt(pageNo - 1) * parseInt(pageCount));
-    const totalCount = await Category.countDocuments({});
+    const totalCount = await Category.countDocuments(query);
     const activeCount = await Category.countDocuments({ status: true });
     sendResponse(res, 200, "Success", {
       message: "Category list retrieved successfully!",

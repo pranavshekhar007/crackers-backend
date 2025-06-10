@@ -65,7 +65,7 @@ comboProductController.post("/list", async (req, res) => {
       .sort(sortOption)
       .limit(parseInt(pageCount))
       .skip(parseInt(pageNo - 1) * parseInt(pageCount));
-    const totalCount = await ComboProduct.countDocuments({});
+    const totalCount = await ComboProduct.countDocuments(query);
     const activeCount = await ComboProduct.countDocuments({ status: true });
     sendResponse(res, 200, "Success", {
       message: "Combo product list retrieved successfully!",

@@ -178,77 +178,47 @@ bookingController.get("/details/:userId", async (req, res) => {
   }
 });
 
-bookingController.put("/update",async (req, res) => {
-    try {
-      const id = req.body.id;
-      const venderData = await Vender.findById(id);
-      if (!venderData) {
-        return sendResponse(res, 404, "Failed", {
-          message: "Vender not found",
-        });
-      }
+bookingController.put("/update", async (req, res) => {
+  try {
+    const { id, ...updateFields } = req.body;
 
-      let updateData = { ...req.body }
-      const updatedUserData = await Vender.findByIdAndUpdate(id, updateData, {
-        new: true,
-      });
-      if(req.body.profileStatus=="reUploaded"){
-        sendNotification({
-          icon:updatedUserData.profilePic,
-          title:`${updatedUserData.firstName} has re-uploaded the details`,
-          subTitle:`${updatedUserData.firstName} has re-uploaded the details`,
-          notifyUserId:"Admin",
-          category:"Vender",
-          subCategory:"Profile update",
-          notifyUser:"Admin",
-        }, req.io)
-      }
-         if(req.body.profileStatus=="rejected"){
-                sendNotification({
-                  icon:updatedUserData.profilePic,
-                  title:`${updatedUserData.firstName} your details has been rejected`,
-                  subTitle:`${updatedUserData.firstName} please go through the details once more`,
-                  notifyUserId:updatedUserData._id,
-                  category:"Vender",
-                  subCategory:"Profile update",
-                  notifyUser:"Vender",
-                }, req.io)
-              }
-      if(req.body.profileStatus=="approved"){
-        sendNotification({
-          icon:updatedUserData.profilePic,
-          title:`${updatedUserData.firstName} your profile has been approved`,
-          subTitle:`${updatedUserData.firstName} congratulations!! your profile has been approved`,
-          notifyUserId:updatedUserData._id,
-          category:"Vender",
-          subCategory:"Profile update",
-          notifyUser:"Vender",
-        }, req.io)
-      }
-      if(req.body.profileStatus=="storeDetailsCompleted"){
-        sendNotification({
-          icon:updatedUserData.profilePic,
-          title:`${updatedUserData.firstName} your storeDetails has been Completed`,
-          subTitle:`${updatedUserData.firstName} congratulations!! your storeDetails has been Completed`,
-          notifyUserId:updatedUserData._id,
-          category:"Vender",
-          subCategory:"Profile update",
-          notifyUser:"Vender",
-        }, req.io)
-      }
-      sendResponse(res, 200, "Success", {
-        message: "Vendor updated successfully!",
-        data: updatedUserData,
-        statusCode: 200,
-      });
-    } catch (error) {
-      console.error(error);
-      sendResponse(res, 500, "Failed", {
-        message: error.message || "Internal server error.",
+    if (!id) {
+      return sendResponse(res, 400, "Failed", {
+        message: "Booking ID is required",
+        statusCode: 400,
       });
     }
+
+    const booking = await Booking.findById(id);
+    if (!booking) {
+      return sendResponse(res, 404, "Failed", {
+        message: "Booking not found",
+        statusCode: 404,
+      });
+    }
+
+    const updatedBooking = await Booking.findByIdAndUpdate(
+      id,
+      updateFields,
+      { new: true }
+    )
+      .populate("userId", "firstName lastName")
+      .populate("product.productId", "name description productHeroImage");
+
+    return sendResponse(res, 200, "Success", {
+      message: "Booking updated successfully",
+      data: updatedBooking,
+      statusCode: 200,
+    });
+  } catch (error) {
+    console.error(error);
+    return sendResponse(res, 500, "Failed", {
+      message: error.message || "Internal server error",
+      statusCode: 500,
+    });
   }
-);
+});
+
 
 bookingController.put("/upload/payment-ss", upload.single("paymentSs"), async (req, res) => {
     try {

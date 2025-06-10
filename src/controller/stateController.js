@@ -1,0 +1,118 @@
+const express = require("express");
+const { sendResponse } = require("../utils/common");
+const State = require("../model/state.schema");
+
+const stateController = express.Router();
+
+stateController.post("/create", async (req, res) => {
+  try {
+    const stateCreated = await State.create(req.body);
+    sendResponse(res, 200, "Success", {
+      message: "State created successfully!",
+      data: stateCreated,
+      statusCode: 200,
+    });
+  } catch (error) {
+    console.error(error);
+    sendResponse(res, 500, "Failed", {
+      message: error.message || "Internal server error",
+      statusCode: 500,
+    });
+  }
+});
+
+stateController.post("/list", async (req, res) => {
+  try {
+    const {
+      searchKey = "",
+      status,
+      pageNo = 1,
+      pageCount = 10,
+      sortByField,
+      sortByOrder,
+    } = req.body;
+
+    const query = {};
+    if (status !== undefined) query.status = status;
+    if (searchKey) query.name = { $regex: searchKey, $options: "i" };
+
+    const sortField = sortByField || "createdAt";
+    const sortOrder = sortByOrder === "asc" ? 1 : -1;
+
+    const stateList = await State.find(query)
+      .sort({ [sortField]: sortOrder })
+      .limit(parseInt(pageCount))
+      .skip((parseInt(pageNo) - 1) * parseInt(pageCount));
+
+    const totalCount = await State.countDocuments({});
+    const activeCount = await State.countDocuments({ status: true });
+
+    sendResponse(res, 200, "Success", {
+      message: "State list retrieved successfully!",
+      data: stateList,
+      documentCount: {
+        totalCount,
+        activeCount,
+        inactiveCount: totalCount - activeCount,
+      },
+      statusCode: 200,
+    });
+  } catch (error) {
+    sendResponse(res, 500, "Failed", {
+      message: error.message || "Internal server error",
+      statusCode: 500,
+    });
+  }
+});
+
+stateController.put("/update", async (req, res) => {
+  try {
+    const { _id } = req.body;
+    const state = await State.findById(_id);
+    if (!state) {
+      return sendResponse(res, 404, "Failed", {
+        message: "State not found",
+        statusCode: 404,
+      });
+    }
+
+    const updatedState = await State.findByIdAndUpdate(_id, req.body, { new: true });
+
+    sendResponse(res, 200, "Success", {
+      message: "State updated successfully!",
+      data: updatedState,
+      statusCode: 200,
+    });
+  } catch (error) {
+    sendResponse(res, 500, "Failed", {
+      message: error.message,
+      statusCode: 500,
+    });
+  }
+});
+
+stateController.delete("/delete/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const state = await State.findById(id);
+    if (!state) {
+      return sendResponse(res, 404, "Failed", {
+        message: "State not found",
+        statusCode: 404,
+      });
+    }
+
+    await State.findByIdAndDelete(id);
+    sendResponse(res, 200, "Success", {
+      message: "State deleted successfully!",
+      statusCode: 200,
+    });
+  } catch (error) {
+    sendResponse(res, 500, "Failed", {
+      message: error.message,
+      statusCode: 500,
+    });
+  }
+});
+
+module.exports = stateController;

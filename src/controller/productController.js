@@ -36,6 +36,7 @@ productController.post("/list", async (req, res) => {
     const {
       searchKey = "",
       status,
+      categoryId,
       pageNo = 1,
       pageCount = 10,
       sortByField,
@@ -45,6 +46,7 @@ productController.post("/list", async (req, res) => {
     const query = {};
     if (status) query.status = status;
     if (searchKey) query.name = { $regex: searchKey, $options: "i" };
+    if (categoryId) query.categoryId = categoryId;
 
     // Construct sorting object
     const sortField = sortByField || "createdAt";
@@ -58,7 +60,7 @@ productController.post("/list", async (req, res) => {
       .sort(sortOption)
       .limit(parseInt(pageCount))
       .skip(parseInt(pageNo - 1) * parseInt(pageCount));
-    const totalCount = await Product.countDocuments({});
+    const totalCount = await Product.countDocuments(query);
     const activeCount = await Product.countDocuments({ status: true });
     sendResponse(res, 200, "Success", {
       message: "Product list retrieved successfully!",
@@ -738,6 +740,20 @@ productController.post("/filter-list", async (req, res) => {
   }
 });
 
+// routes/product.js
+productController.get("/by-category/:categoryId", async (req, res) => {
+  try {
+    const products = await Product.find({ categoryId: req.params.categoryId });
+    sendResponse(res, 200, "Success", {
+      message: "Products fetched successfully",
+      data: products,
+    });
+  } catch (error) {
+    sendResponse(res, 500, "Failed", {
+      message: "Error fetching products",
+    });
+  }
+});
 
 
 module.exports = productController;

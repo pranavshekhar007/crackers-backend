@@ -44,7 +44,7 @@ tagController.post("/list", async (req, res) => {
       .sort(sortOption)
       .limit(parseInt(pageCount))
       .skip(parseInt(pageNo - 1) * parseInt(pageCount));
-    const totalCount = await Tag.countDocuments({});
+    const totalCount = await Tag.countDocuments(query);
     const activeCount = await Tag.countDocuments({ status: true });
     sendResponse(res, 200, "Success", {
       message: "Tag list retrieved successfully!",
