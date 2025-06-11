@@ -175,7 +175,8 @@ comboProductController.delete("/delete/:id", async (req, res) => {
 comboProductController.get("/details/:id", async (req, res) => {
   try {
     const id = req.params.id;
-    const product = await ComboProduct.findOne({ _id: id });
+    const product = await ComboProduct.findOne({ _id: id })
+    .populate("productId.product");
     if (product) {
       return sendResponse(res, 200, "Success", {
         message: "Product details fetched  successfully",
