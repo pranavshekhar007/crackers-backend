@@ -151,14 +151,13 @@ bookingController.post("/list", async (req, res) => {
 });
 
 
-bookingController.get("/details/:userId", async (req, res) => {
+bookingController.get("/details/:id", async (req, res) => {
   try {
-    const userId = req.params.userId;
-    const booking = await Booking.find({ userId: userId })
-      .populate("product.productId")
-      .populate("userId");
+    const id = req.params.id;
+    const booking = await Booking.findOne({ _id: id })
+      .populate("product.productId");
 
-    if (booking.length > 0) {
+    if (booking) {
       return sendResponse(res, 200, "Success", {
         message: "Booking details fetched successfully",
         data: booking,
