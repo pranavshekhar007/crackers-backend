@@ -155,6 +155,7 @@ bookingController.get("/details/:id", async (req, res) => {
   try {
     const id = req.params.id;
     const booking = await Booking.findOne({ _id: id })
+      .populate("userId", "firstName lastName email phone")
       .populate("product.productId");
 
     if (booking) {

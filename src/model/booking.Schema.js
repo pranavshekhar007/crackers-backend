@@ -8,7 +8,7 @@ const bookingSchema = mongoose.Schema({
   status: {
     type: String,
     default: "orderPlaced",
-    enum: ["orderPlaced","paymentSsUpload", "paymentConfirm", "orderPacked", "orderDispatch", "completed", "cancelled", "ssRejected"],
+    enum: ["orderPlaced","paymentSsUpload", "paymentConfirm","shipping", "orderPacked", "outForDelivery", "completed", "delivered", "cancelled", "ssRejected"],
   },
   signature: {
     type: String,
