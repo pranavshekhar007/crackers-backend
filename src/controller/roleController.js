@@ -3,7 +3,6 @@ const { sendResponse } = require("../utils/common");
 require("dotenv").config();
 const Role = require("../model/role.Schema");
 const roleController = express.Router();
-require("dotenv").config();
 const cloudinary = require("../utils/cloudinary");
 const upload = require("../utils/multer");
 

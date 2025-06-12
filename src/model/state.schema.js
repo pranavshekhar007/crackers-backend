@@ -1,12 +1,19 @@
 const mongoose = require("mongoose");
 const timestamps = require("mongoose-timestamp");
 
-const stateSchema = new mongoose.Schema({
+const stateSchema = mongoose.Schema({
   name: {
     type: String,
     required: true,
-    unique: true,
-    trim: true,
+  },
+  city: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "City",
+    required: true,
+  }],
+  status: {
+    type: Boolean,
+    default: true,
   },
 });
 

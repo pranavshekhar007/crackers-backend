@@ -182,7 +182,7 @@ bookingController.get("/details/:id", async (req, res) => {
 bookingController.get("/details/:userId", async (req, res) => {
   try {
     const userId = req.params.userId;
-    const booking = await Booking.find({ userId })
+    const booking = await Booking.find({ userId: userId })
       .populate("product.productId")
       .populate("userId");
 

@@ -1,10 +1,12 @@
 const express = require("express");
 const { sendResponse } = require("../utils/common");
-const State = require("../model/state.schema");
+require("dotenv").config();
+const State = require("../model/state.schema")
 
 const stateController = express.Router();
 
 stateController.post("/create", async (req, res) => {
+    
   try {
     const stateCreated = await State.create(req.body);
     sendResponse(res, 200, "Success", {
@@ -33,14 +35,16 @@ stateController.post("/list", async (req, res) => {
     } = req.body;
 
     const query = {};
-    if (status !== undefined) query.status = status;
+    if (status) query.status = status;
     if (searchKey) query.name = { $regex: searchKey, $options: "i" };
 
     const sortField = sortByField || "createdAt";
     const sortOrder = sortByOrder === "asc" ? 1 : -1;
+    const sortOption = { [sortField]: sortOrder };
 
     const stateList = await State.find(query)
-      .sort({ [sortField]: sortOrder })
+    .populate("city", "name")
+      .sort(sortOption)
       .limit(parseInt(pageCount))
       .skip((parseInt(pageNo) - 1) * parseInt(pageCount));
 
