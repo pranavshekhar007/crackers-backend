@@ -178,6 +178,34 @@ bookingController.get("/details/:id", async (req, res) => {
   }
 });
 
+
+bookingController.get("/details/:userId", async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const booking = await Booking.find({ userId: userId })
+      .populate("product.productId")
+      .populate("userId");
+
+    if (booking.length > 0) {
+      return sendResponse(res, 200, "Success", {
+        message: "Booking details fetched successfully",
+        data: booking,
+        statusCode: 200,
+      });
+    } else {
+      return sendResponse(res, 404, "Failed", {
+        message: "No bookings found for this user",
+        statusCode: 404,
+      });
+    }
+  } catch (error) {
+    return sendResponse(res, 500, "Failed", {
+      message: error.message || "Internal server error.",
+      statusCode: 500,
+    });
+  }
+});
+
 bookingController.put("/update", async (req, res) => {
   try {
     const { id, ...updateFields } = req.body;
