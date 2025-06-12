@@ -9,6 +9,7 @@ const upload = require("../utils/multer");
 const auth = require("../utils/auth");
 const fs = require("fs");
 const path = require("path");
+const { default: mongoose } = require("mongoose");
 
 
 bookingController.post("/create", async (req, res) => {
@@ -181,8 +182,11 @@ bookingController.get("/details/:id", async (req, res) => {
 
 bookingController.get("/details/:userId", async (req, res) => {
   try {
-    const userId = req.params.userId;
-    const booking = await Booking.find({ userId: userId })
+    console.log("Received userId:", req.params.userId);
+
+    const userId = mongoose.Types.ObjectId(req.params.userId);
+    console.log("Converted ObjectId:", userId);
+    const booking = await Booking.find({ userId })
       .populate("product.productId")
       .populate("userId");
 
