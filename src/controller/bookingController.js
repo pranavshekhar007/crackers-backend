@@ -11,10 +11,18 @@ const fs = require("fs");
 const path = require("path");
 const { default: mongoose } = require("mongoose");
 
-
 bookingController.post("/create", async (req, res) => {
   try {
-    const { userId, totalAmount, product, modeOfPayment, paymentId, signature, address, status } = req.body;
+    const {
+      userId,
+      totalAmount,
+      product,
+      modeOfPayment,
+      paymentId,
+      signature,
+      address,
+      status,
+    } = req.body;
 
     // Validate required fields
     if (!userId) {
@@ -80,8 +88,7 @@ bookingController.post("/list", async (req, res) => {
       })
       .sort(sortOption)
       .skip(parseInt(pageNo - 1) * parseInt(pageCount))
-      .limit(parseInt(pageCount))
-      
+      .limit(parseInt(pageCount));
 
     const totalCount = await Booking.countDocuments(query);
 
@@ -151,7 +158,6 @@ bookingController.post("/list", async (req, res) => {
   }
 });
 
-
 bookingController.get("/details/:id", async (req, res) => {
   try {
     const id = req.params.id;
@@ -179,16 +185,15 @@ bookingController.get("/details/:id", async (req, res) => {
   }
 });
 
-
 bookingController.get("/details/:userId", async (req, res) => {
   try {
-    console.log("Received userId:", req.params.userId);
-
     const userId = mongoose.Types.ObjectId(req.params.userId);
-    console.log("Converted ObjectId:", userId);
     const booking = await Booking.find({ userId })
-      .populate("product.productId")
-      .populate("userId");
+    .populate("userId", "firstName lastName")
+    .populate({
+      path: "product.productId",
+      select: "name description productHeroImage",
+    })
 
     if (booking.length > 0) {
       return sendResponse(res, 200, "Success", {
@@ -229,11 +234,9 @@ bookingController.put("/update", async (req, res) => {
       });
     }
 
-    const updatedBooking = await Booking.findByIdAndUpdate(
-      id,
-      updateFields,
-      { new: true }
-    )
+    const updatedBooking = await Booking.findByIdAndUpdate(id, updateFields, {
+      new: true,
+    })
       .populate("userId", "firstName lastName")
       .populate("product.productId", "name description productHeroImage");
 
@@ -251,8 +254,10 @@ bookingController.put("/update", async (req, res) => {
   }
 });
 
-
-bookingController.put("/upload/payment-ss", upload.single("paymentSs"), async (req, res) => {
+bookingController.put(
+  "/upload/payment-ss",
+  upload.single("paymentSs"),
+  async (req, res) => {
     try {
       const bookingId = req.body.id;
 
@@ -267,7 +272,9 @@ bookingController.put("/upload/payment-ss", upload.single("paymentSs"), async (r
       let updatedData = { ...req.body };
 
       if (req.file) {
-        const paymentScreenshot = await cloudinary.uploader.upload(req.file.path);
+        const paymentScreenshot = await cloudinary.uploader.upload(
+          req.file.path
+        );
         updatedData.paymentSs = paymentScreenshot.url;
       }
 
@@ -291,6 +298,5 @@ bookingController.put("/upload/payment-ss", upload.single("paymentSs"), async (r
     }
   }
 );
-
 
 module.exports = bookingController;
