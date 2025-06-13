@@ -166,7 +166,7 @@ bookingController.get("/details/:id", async (req, res) => {
       });
     } else {
       return sendResponse(res, 404, "Failed", {
-        message: "No bookings found for this user",
+        message: "No bookings found",
         statusCode: 404,
       });
     }
@@ -179,8 +179,9 @@ bookingController.get("/details/:id", async (req, res) => {
 });
 
 
-bookingController.get("/details/:userId", async (req, res) => {
+bookingController.get("/user/:userId", async (req, res) => {
   try {
+    console.log("Hello :" ,req.params.userId);
     const userId = req.params.userId;
     const booking = await Booking.find({ userId: userId })
       .populate("product.productId")

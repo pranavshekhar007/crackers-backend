@@ -6,11 +6,7 @@ const stateSchema = mongoose.Schema({
     type: String,
     required: true,
   },
-  city: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "City",
-    required: true,
-  }],
+
   status: {
     type: Boolean,
     default: true,

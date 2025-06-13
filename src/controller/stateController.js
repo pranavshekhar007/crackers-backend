@@ -43,7 +43,6 @@ stateController.post("/list", async (req, res) => {
     const sortOption = { [sortField]: sortOrder };
 
     const stateList = await State.find(query)
-    .populate("city", "name")
       .sort(sortOption)
       .limit(parseInt(pageCount))
       .skip((parseInt(pageNo) - 1) * parseInt(pageCount));

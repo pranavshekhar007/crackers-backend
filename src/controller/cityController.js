@@ -42,6 +42,7 @@ cityController.post("/list", async (req, res) => {
     const sortOrder = sortByOrder === "asc" ? 1 : -1;
 
     const cities = await City.find(query)
+      .populate("state", "name")
       .sort({ [sortField]: sortOrder })
       .limit(parseInt(pageCount))
       .skip((parseInt(pageNo) - 1) * parseInt(pageCount));

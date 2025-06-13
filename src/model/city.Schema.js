@@ -6,6 +6,11 @@ const citySchema = new mongoose.Schema({
     required: true,
     trim: true,
   },
+  state: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "State",
+    required: true,
+  },
   minimumPrice: {
     type: Number,
     required: true,
