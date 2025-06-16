@@ -64,6 +64,18 @@ const productSchema = mongoose.Schema({
     type: String,
   },
 
+  soundLevel: { type: String, enum: ["Mild", "Medium", "Loud"] },
+
+  lightEffect: { type: String },
+
+  safetyRating: { type: String, enum: ["KidSafe", "Adult Supervision Only"] },
+
+  usageArea: { type: String, enum: ["Outdoor", "Open Space"] },
+
+  duration: { type: Number },
+
+  weightPerBox: { type: Number },
+
   // step 3
   productHeroImage: {
     type: String,

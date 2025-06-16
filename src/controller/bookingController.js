@@ -13,25 +13,9 @@ const path = require("path");
 
 bookingController.post("/create", async (req, res) => {
   try {
-    const { userId, totalAmount, product, modeOfPayment, paymentId, signature, address, status } = req.body;
-
-    // Validate required fields
-    if (!userId) {
-      return sendResponse(res, 400, "Failed", {
-        message: "userId is required in the request body",
-        statusCode: 400,
-      });
-    }
 
     const bookingData = {
-      userId,
-      totalAmount,
-      product,
-      modeOfPayment,
-      paymentId,
-      signature,
-      address,
-      status,
+      ...req.body,
     };
 
     const bookingCreated = await Booking.create(bookingData);

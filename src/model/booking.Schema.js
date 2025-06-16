@@ -33,6 +33,11 @@ const bookingSchema = mongoose.Schema({
       productHeroImage: { type: String }
     },
   ],
+
+  deliveryCharge: {
+    type: String,
+  },
+
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
