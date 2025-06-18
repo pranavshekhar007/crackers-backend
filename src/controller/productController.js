@@ -8,6 +8,7 @@ const upload = require("../utils/multer");
 const auth = require("../utils/auth");
 const fs = require("fs");
 const path = require("path");
+const Rating = require("../model/productRating.Schema")
 
 productController.post("/create", async (req, res) => {
   try {
@@ -163,11 +164,18 @@ productController.delete("/delete/:id", async (req, res) => {
 productController.get("/details/:id", async (req, res) => {
   try {
     const id = req.params.id;
-    const product = await Product.findOne({ _id: id });
+    const product = await Product.findOne({ _id: id }) .populate("categoryId")
+    // .populate("subCategoryId")
+     .populate("brandId")
+    // .populate("zipcodeId");
+    const ratingList = await Rating.find({productId:id})
+          .populate({
+            path: "userId",
+          })
     if (product) {
       return sendResponse(res, 200, "Success", {
         message: "Product details fetched  successfully",
-        data: product,
+        data: {product, ratingList},
         statusCode: 200,
       });
     } else {

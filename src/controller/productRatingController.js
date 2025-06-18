@@ -2,6 +2,7 @@ const express = require("express");
 const { sendResponse } = require("../utils/common");
 require("dotenv").config();
 const Rating = require("../model/productRating.Schema");
+const Product = require("../model/product.Schema");
 const productRatingController = express.Router();
 require("dotenv").config();
 const cloudinary = require("../utils/cloudinary");
@@ -9,24 +10,32 @@ const upload = require("../utils/multer");
 const auth = require("../utils/auth");
 
 
-productRatingController.post("/create", upload.single("image"), async (req, res) => {
+productRatingController.post("/create", async (req, res) => {
   try {
-    let obj;
-    if (req.file) {
-      let image = await cloudinary.uploader.upload(req.file.path, function (err, result) {
-        if (err) {
-          return err;
-        } else {
-          return result;
-        }
-      });
-      obj = { ...req.body, image: image.url };
-    }
-    const ratingCreated = await Rating.create(obj);
+    
+
+    const ratingCreated = await Rating.create(req.body);
+
+    // ⭐ Calculate the average rating of this product
+    const productId = ratingCreated.productId;
+
+    const allRatings = await Rating.find({ productId });
+
+    const totalRatings = allRatings.length;
+    const sumRatings = allRatings.reduce((sum, item) => sum + Number(item.rating), 0);
+
+    const averageRating = (sumRatings / totalRatings).toFixed(1); // 1 decimal point ka average
+
+    // ⭐ Update product's rating field
+    await Product.findByIdAndUpdate(productId, {
+      rating: averageRating,
+    });
+
     sendResponse(res, 200, "Success", {
-      message: "Rating created successfully!",
+      message: "Rating created and product rating updated successfully!",
       data: ratingCreated,
-      statusCode:200
+      averageRating,
+      statusCode: 200,
     });
   } catch (error) {
     console.error(error);
@@ -35,7 +44,6 @@ productRatingController.post("/create", upload.single("image"), async (req, res)
     });
   }
 });
-
 productRatingController.post("/list", async (req, res) => {
   try {
     const {
@@ -65,6 +73,10 @@ productRatingController.post("/list", async (req, res) => {
       .populate({
         path: "productId", // Field to populate
         select: "name description", // Specify the fields to retrieve from the rating collection
+      })
+      .populate({
+        path: "userId", // Field to populate
+         // Specify the fields to retrieve from the rating collection
       })
     const totalCount = await Rating.countDocuments({});
     const activeCount = await Rating.countDocuments({status:true});

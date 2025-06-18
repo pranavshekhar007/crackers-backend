@@ -10,9 +10,6 @@ const productRatingSchema = mongoose.Schema({
         type: Number,
         default: true,
     },
-    image: {
-        type: String,
-    },
     productId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Product",
