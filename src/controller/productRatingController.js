@@ -32,7 +32,7 @@ productRatingController.post("/create", async (req, res) => {
     });
 
     sendResponse(res, 200, "Success", {
-      message: "Rating created and product rating updated successfully!",
+      message: "Your review has been submitted successfully!",
       data: ratingCreated,
       averageRating,
       statusCode: 200,
