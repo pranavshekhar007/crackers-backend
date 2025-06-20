@@ -649,7 +649,7 @@ userController.put(
   upload.single("profilePic"),
   async (req, res) => {
     try {
-      const id = req.body.id;
+      const id = req.body.userId;
       const userData = await User.findOne({ _id: id });
       if (!userData) {
         return sendResponse(res, 404, "Failed", {
