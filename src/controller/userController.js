@@ -170,8 +170,8 @@ userController.post(
 
 userController.post("/otp-verification", async (req, res) => {
   try {
-    const { phone, phoneOtp } = req.body;
-    const user = await User.findOne({ phone, phoneOtp });
+    const { phone, phoneOtp, firstName } = req.body;
+    const user = await User.findOne({ phone, phoneOtp, firstName });
     if (user) {
       const updatedUser = await User.findByIdAndUpdate(
         user._id,

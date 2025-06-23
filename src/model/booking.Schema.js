@@ -3,12 +3,12 @@ const timestamps = require("mongoose-timestamp");
 
 const bookingSchema = mongoose.Schema({
   totalAmount: {
-    type: String,
+    type: Number,
   },
   status: {
     type: String,
-    default: "orderPlaced",
-    enum: ["orderPlaced","paymentSsUpload", "paymentConfirm","shipping", "orderPacked", "outForDelivery", "completed", "delivered", "cancelled", "ssRejected"],
+    default: "pending",
+    enum: [ "pending", "paymentSsUpload",  "ssRejected", "cancelled", "paymentConfirm", "orderPlaced", "orderPacked", "shipping", "outForDelivery", "completed"],
   },
   signature: {
     type: String,
@@ -34,6 +34,11 @@ const bookingSchema = mongoose.Schema({
     },
   ],
 
+  shipping: {
+    type: String,
+    enum: ["homeDelivery, lorryPay"],
+  },
+
   deliveryCharge: {
     type: String,
   },
@@ -43,6 +48,12 @@ const bookingSchema = mongoose.Schema({
     ref: "User",
     required: true,
   },
+  cityId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "City",
+    required: true,
+  },
+
   address: {
     fullName: { type: String, required: true },
     phone: { type: String, required: true },

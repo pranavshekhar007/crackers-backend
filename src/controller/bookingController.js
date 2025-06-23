@@ -57,6 +57,7 @@ bookingController.post("/list", async (req, res) => {
     // Fetch the booking list
     const bookingList = await Booking.find(query)
       .populate("userId", "firstName lastName")
+      .populate("cityId", "name minimumPrice")
       .populate({
         path: "product.productId",
         select: "name description productHeroImage",
@@ -86,7 +87,7 @@ bookingController.post("/list", async (req, res) => {
       statusCountMap[_id] = count;
     });
 
-    // 📌 Date calculations
+    //  Date calculations
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
 
@@ -98,7 +99,7 @@ bookingController.post("/list", async (req, res) => {
     monthStart.setDate(1);
     monthStart.setHours(0, 0, 0, 0);
 
-    // 📌 Counts based on createdAt date
+    // Counts based on createdAt date
     const todaysOrder = await Booking.countDocuments({
       ...query,
       createdAt: { $gte: todayStart },
