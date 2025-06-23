@@ -171,11 +171,11 @@ userController.post(
 userController.post("/otp-verification", async (req, res) => {
   try {
     const { phone, phoneOtp, firstName } = req.body;
-    const user = await User.findOne({ phone, phoneOtp, firstName });
+    const user = await User.findOne({ phone, phoneOtp });
     if (user) {
       const updatedUser = await User.findByIdAndUpdate(
         user._id,
-        { isPhoneVerified: true },
+        { isPhoneVerified: true, ...(firstName && { firstName }) },
         { new: true }
       );
       return sendResponse(res, 200, "Success", {
@@ -348,14 +348,14 @@ userController.post("/list", async (req, res) => {
   }
 });
 
-userController.post("/add-to-cart/:id",  async (req, res) => {
+userController.post("/add-to-cart/:id", async (req, res) => {
   try {
     const { id: productId } = req.params;
     const { userId: currentUserId } = req.body;
 
     if (!productId || !currentUserId) {
       return sendResponse(res, 422, "Failed", {
-        message: "Missing productId or userId!", 
+        message: "Missing productId or userId!",
       });
     }
 
@@ -418,8 +418,12 @@ userController.post("/add-to-cart/:id",  async (req, res) => {
       };
       message = "Item added successfully to cart";
     }
-    
-   const updatedUser = await User.findByIdAndUpdate(currentUserId, updateQuery, { new: true });
+
+    const updatedUser = await User.findByIdAndUpdate(
+      currentUserId,
+      updateQuery,
+      { new: true }
+    );
 
     sendResponse(res, 200, "Success", { message, data: updatedUser.cartItems });
   } catch (error) {
@@ -567,7 +571,7 @@ userController.get("/cart/:userId", async (req, res) => {
   }
 });
 
-userController.post("/add-to-wishlist/:id",  async (req, res) => {
+userController.post("/add-to-wishlist/:id", async (req, res) => {
   try {
     if (!req.params.id) {
       return sendResponse(res, 422, "Failed", {
@@ -644,50 +648,46 @@ userController.get("/wishlist/:userId", async (req, res) => {
   }
 });
 
-userController.put(
-  "/update",
-  upload.single("profilePic"),
-  async (req, res) => {
-    try {
-      const id = req.body.userId;
-      const userData = await User.findOne({ _id: id });
-      if (!userData) {
-        return sendResponse(res, 404, "Failed", {
-          message: "User not found",
-        });
-      }
-
-      let updatedData = { ...req.body };
-
-      if (req.file) {
-        const profilePic = await cloudinary.uploader.upload(req.file.path);
-        updatedData.profilePic = profilePic.url;
-      }
-      updatedData.profileStatus = "completed";
-      const updatedUser = await User.findByIdAndUpdate(id, updatedData, {
-        new: true, // Return the updated document
-      });
-
-      // ✅ Emit the event after updating
-      req.io.emit("userUpdated", {
-        message: "User profile updated",
-        userId: updatedUser._id,
-        updatedData: updatedUser,
-      });
-
-      sendResponse(res, 200, "Success", {
-        message: "User updated successfully!",
-        data: updatedUser,
-        statusCode: 200,
-      });
-    } catch (error) {
-      console.error(error);
-      sendResponse(res, 500, "Failed", {
-        message: error.message || "Internal server error",
+userController.put("/update", upload.single("profilePic"), async (req, res) => {
+  try {
+    const id = req.body.userId;
+    const userData = await User.findOne({ _id: id });
+    if (!userData) {
+      return sendResponse(res, 404, "Failed", {
+        message: "User not found",
       });
     }
+
+    let updatedData = { ...req.body };
+
+    if (req.file) {
+      const profilePic = await cloudinary.uploader.upload(req.file.path);
+      updatedData.profilePic = profilePic.url;
+    }
+    updatedData.profileStatus = "completed";
+    const updatedUser = await User.findByIdAndUpdate(id, updatedData, {
+      new: true, // Return the updated document
+    });
+
+    // ✅ Emit the event after updating
+    req.io.emit("userUpdated", {
+      message: "User profile updated",
+      userId: updatedUser._id,
+      updatedData: updatedUser,
+    });
+
+    sendResponse(res, 200, "Success", {
+      message: "User updated successfully!",
+      data: updatedUser,
+      statusCode: 200,
+    });
+  } catch (error) {
+    console.error(error);
+    sendResponse(res, 500, "Failed", {
+      message: error.message || "Internal server error",
+    });
   }
-);
+});
 
 userController.post("/home-details", async (req, res) => {
   try {
@@ -780,33 +780,34 @@ userController.delete("/delete/:id", async (req, res) => {
 userController.get("/dashboard-details", async (req, res) => {
   try {
     const [
-  totalUser,
-  activeUser,
-  inactiveUser,
-  totalBooking,
-  activeBooking,
-  bookingCompleted,
-  totalProduct,
-  singleProduct,
-  comboProduct,
-] = await Promise.all([
-  User.countDocuments({}),
-  User.countDocuments({ profileStatus: "completed" }),
-  User.countDocuments({ profileStatus: "incompleted" }),
-  Booking.countDocuments({}),
-  Booking.countDocuments({ status: { $in: ["orderPlaced", "orderPacked", "outForDelivery"]}}),
-  Booking.countDocuments({ status: "completed" }),
-  (async () => {
-    const [productCount, comboProductCount] = await Promise.all([
+      totalUser,
+      activeUser,
+      inactiveUser,
+      totalBooking,
+      activeBooking,
+      bookingCompleted,
+      totalProduct,
+      singleProduct,
+      comboProduct,
+    ] = await Promise.all([
+      User.countDocuments({}),
+      User.countDocuments({ profileStatus: "completed" }),
+      User.countDocuments({ profileStatus: "incompleted" }),
+      Booking.countDocuments({}),
+      Booking.countDocuments({
+        status: { $in: ["orderPlaced", "orderPacked", "outForDelivery"] },
+      }),
+      Booking.countDocuments({ status: "completed" }),
+      (async () => {
+        const [productCount, comboProductCount] = await Promise.all([
+          Product.countDocuments({}),
+          ComboProduct.countDocuments({}),
+        ]);
+        return productCount + comboProductCount;
+      })(),
       Product.countDocuments({}),
       ComboProduct.countDocuments({}),
     ]);
-    return productCount + comboProductCount;
-  })(),
-  Product.countDocuments({}),
-  ComboProduct.countDocuments({}),
-]);
-
 
     // **Last 15 Days Booking Count Logic**
     const last15Days = await Booking.aggregate([
