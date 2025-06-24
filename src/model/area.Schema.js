@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 const timestamps = require("mongoose-timestamp");
 
-const citySchema = new mongoose.Schema({
+const areaSchema = new mongoose.Schema({
   name: {
     type: String,
     required: true,
@@ -12,7 +12,20 @@ const citySchema = new mongoose.Schema({
     ref: "State",
     required: true,
   },
+  city: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "City",
+  },
+  Pincode: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Pincode",
+  },
   minimumPrice: {
+    type: Number,
+    required: true,
+    min: 0,
+  },
+  deliveryCharge: {
     type: Number,
     required: true,
     min: 0,
@@ -23,5 +36,5 @@ const citySchema = new mongoose.Schema({
   },
 });
 
-citySchema.plugin(timestamps);
-module.exports = mongoose.model("City", citySchema);
+areaSchema.plugin(timestamps);
+module.exports = mongoose.model("Area", areaSchema);

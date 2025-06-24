@@ -31,21 +31,50 @@ pincodeController.post("/create", async (req, res) => {
 });
 
 
-pincodeController.get("/list", async (req, res) => {
-  try {
-    const pincodes = await Pincode.find().sort({ pincode: 1 });
-    sendResponse(res, 200, "Success", {
-      message: "Pincode list retrieved successfully!",
-      data: pincodes,
-      statusCode: 200,
-    });
-  } catch (error) {
-    sendResponse(res, 500, "Failed", {
-      message: error.message,
-      statusCode: 500,
-    });
-  }
-});
+pincodeController.post("/list", async (req, res) => {
+    try {
+      const {
+        searchKey = "",
+        status,
+        pageNo = 1,
+        pageCount = 10,
+        sortByField,
+        sortByOrder,
+      } = req.body;
+  
+      const query = {};
+      if (status) query.status = status;
+      if (searchKey) query.pincode = { $regex: searchKey, $options: "i" };
+  
+      const sortField = sortByField || "createdAt";
+      const sortOrder = sortByOrder === "asc" ? 1 : -1;
+      const sortOption = { [sortField]: sortOrder };
+  
+      const pincodeList = await Pincode.find(query)
+        .sort(sortOption)
+        .limit(parseInt(pageCount))
+        .skip((parseInt(pageNo) - 1) * parseInt(pageCount));
+  
+      const totalCount = await Pincode.countDocuments({});
+      const activeCount = await Pincode.countDocuments({ status: true });
+  
+      sendResponse(res, 200, "Success", {
+        message: "Pincode list retrieved successfully!",
+        data: pincodeList,
+        documentCount: {
+          totalCount,
+          activeCount,
+          inactiveCount: totalCount - activeCount,
+        },
+        statusCode: 200,
+      });
+    } catch (error) {
+      sendResponse(res, 500, "Failed", {
+        message: error.message || "Internal server error",
+        statusCode: 500,
+      });
+    }
+  });
 
 
 pincodeController.put("/update", async (req, res) => {

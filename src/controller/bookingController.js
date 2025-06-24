@@ -82,6 +82,7 @@ bookingController.post("/list", async (req, res) => {
       completed: 0,
       cancelled: 0,
       shipping: 0,
+      pending: 0,
     };
 
     statusCounts.forEach(({ _id, count }) => {

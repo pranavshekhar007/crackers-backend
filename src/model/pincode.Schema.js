@@ -6,6 +6,11 @@ const pincodeSchema = new mongoose.Schema({
     required: true,
     trim: true,
   },
+
+  status: {
+    type: Boolean,
+    default: true,
+  },
 });
 
 module.exports = mongoose.model("Pincode", pincodeSchema);
