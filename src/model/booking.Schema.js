@@ -8,7 +8,7 @@ const bookingSchema = mongoose.Schema({
   status: {
     type: String,
     default: "pending",
-    enum: [ "pending", "paymentSsUpload",  "ssRejected", "cancelled", "paymentConfirm", "orderPlaced", "orderPacked", "shipping", "outForDelivery", "completed"],
+    enum: [ "pending", "paymentSsUpload", "approved",  "ssRejected", "cancelled", "orderPlaced", "orderPacked", "shipping", "outForDelivery", "completed"],
   },
   signature: {
     type: String,
@@ -64,6 +64,13 @@ const bookingSchema = mongoose.Schema({
     pincode: { type: String, required: true },
     country: { type: String, required: true },
   },
+
+  statusHistory: [
+    {
+      status: { type: String },
+      updatedAt: { type: Date, default: Date.now },
+    },
+  ],
 
 });
 

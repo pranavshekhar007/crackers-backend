@@ -34,6 +34,7 @@ const bulkOrderController = require("./controller/bulkOrderController");
 const stateController = require("./controller/stateController");
 const cityController = require("./controller/cityController");
 const excelController = require("./controller/excelController");
+const pincodeController = require("./controller/pincodeController");
 
 router.use("/user", userController);
 router.use("/driver", driverController);
@@ -69,6 +70,7 @@ router.use("/bulk-order", bulkOrderController);
 router.use("/state", stateController);
 router.use("/city", cityController);
 router.use("/excel", excelController);
+router.use("/pin-code", pincodeController);
 
 
 module.exports = router;

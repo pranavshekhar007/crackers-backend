@@ -81,6 +81,7 @@ bookingController.post("/list", async (req, res) => {
       orderDispatch: 0,
       completed: 0,
       cancelled: 0,
+      shipping: 0,
     };
 
     statusCounts.forEach(({ _id, count }) => {
@@ -194,7 +195,7 @@ bookingController.get("/user/:userId", async (req, res) => {
 
 bookingController.put("/update", async (req, res) => {
   try {
-    const { id, ...updateFields } = req.body;
+    const { id, status, ...updateFields } = req.body;
 
     if (!id) {
       return sendResponse(res, 400, "Failed", {
@@ -211,9 +212,27 @@ bookingController.put("/update", async (req, res) => {
       });
     }
 
+    // Update the statusHistory if the status has changed
+    if (status && status !== booking.status) {
+      if (!booking.statusHistory) booking.statusHistory = [];
+
+      booking.statusHistory.push({
+        status: status,
+        updatedAt: new Date(),
+      });
+    }
+
+    // Merge updated fields including status
+    const updatedFields = {
+      ...updateFields,
+      ...(status && { status }), // only add status if it exists
+      statusHistory: booking.statusHistory,
+    };
+
+
     const updatedBooking = await Booking.findByIdAndUpdate(
       id,
-      updateFields,
+      updatedFields,
       { new: true }
     )
       .populate("userId", "firstName lastName")
