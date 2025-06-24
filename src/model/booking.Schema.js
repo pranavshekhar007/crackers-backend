@@ -36,7 +36,7 @@ const bookingSchema = mongoose.Schema({
 
   shipping: {
     type: String,
-    enum: ["homeDelivery, lorryPay"],
+    enum: ["homeDelivery", "lorryPay"],
   },
 
   deliveryCharge: {
@@ -46,12 +46,11 @@ const bookingSchema = mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
-    required: true,
+    
   },
   cityId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "City",
-    required: true,
   },
 
   address: {
