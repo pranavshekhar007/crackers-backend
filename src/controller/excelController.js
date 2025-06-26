@@ -1,13 +1,74 @@
 const express = require("express");
+require("dotenv").config();
 const xlsx = require("xlsx");
 const fs = require("fs");
+const path = require("path");
+const mongoose = require("mongoose");
 const { sendResponse } = require("../utils/common");
 const upload = require("../utils/multer");
 const Product = require("../model/product.Schema");
-const path = require("path");
 
 const excelController = express.Router();
 
+// Convert string to ObjectId safely
+const toObjectId = (id) => {
+  try {
+    return mongoose.Types.ObjectId(id.trim());
+  } catch {
+    return null;
+  }
+};
+
+// Normalize each row before insert
+const normalizeProductData = (item) => {
+  if (item.categoryId && typeof item.categoryId === "string") {
+    item.categoryId = item.categoryId
+      .split(",")
+      .map(id => toObjectId(id))
+      .filter(Boolean);
+  }
+
+  if (item.venderId && typeof item.venderId === "string") {
+    item.venderId = item.venderId
+      .split(",")
+      .map(id => toObjectId(id))
+      .filter(Boolean);
+  }
+
+  if (item.brandId && typeof item.brandId === "string") {
+    item.brandId = toObjectId(item.brandId);
+  }
+
+  if (item.productGallery && typeof item.productGallery === "string") {
+    try {
+      item.productGallery = JSON.parse(item.productGallery);
+    } catch {
+      item.productGallery = item.productGallery
+        .split(",")
+        .map(img => img.trim());
+    }
+  }
+
+  if (item.productOtherDetails && typeof item.productOtherDetails === "string") {
+    try {
+      item.productOtherDetails = JSON.parse(item.productOtherDetails);
+    } catch {
+      item.productOtherDetails = [];
+    }
+  }
+
+  if (item.productVariants && typeof item.productVariants === "string") {
+    try {
+      item.productVariants = JSON.parse(item.productVariants);
+    } catch {
+      item.productVariants = [];
+    }
+  }
+
+  return item;
+};
+
+// BULK UPLOAD
 excelController.post("/upload", upload.single("file"), async (req, res) => {
   try {
     if (!req.file) {
@@ -18,12 +79,11 @@ excelController.post("/upload", upload.single("file"), async (req, res) => {
     }
 
     const filePath = req.file.path;
-
     const workbook = xlsx.readFile(filePath);
     const sheetName = workbook.SheetNames[0];
     const jsonData = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
 
-    fs.unlinkSync(filePath); // delete file after reading
+    fs.unlinkSync(filePath); // Clean up
 
     if (!jsonData || jsonData.length === 0) {
       return sendResponse(res, 422, "Failed", {
@@ -32,11 +92,11 @@ excelController.post("/upload", upload.single("file"), async (req, res) => {
       });
     }
 
-    // Optional: Validate required fields before inserting
-    const filteredData = jsonData.filter(item => item.name && item.price);
+    const processedData = jsonData
+      .filter(item => item.name && item.price)
+      .map(normalizeProductData);
 
-    // Insert into MongoDB using your schema
-    const insertedProducts = await Product.insertMany(filteredData);
+    const insertedProducts = await Product.insertMany(processedData);
 
     return sendResponse(res, 200, "Success", {
       message: "Excel data uploaded and saved successfully!",
@@ -53,6 +113,7 @@ excelController.post("/upload", upload.single("file"), async (req, res) => {
   }
 });
 
+// EXPORT PRODUCTS
 excelController.post("/export", async (req, res) => {
   try {
     const {
@@ -96,11 +157,9 @@ excelController.post("/export", async (req, res) => {
     }));
 
     const exportDir = path.join(__dirname, "../exports");
-    if (!fs.existsSync(exportDir)) {
-      fs.mkdirSync(exportDir);
-    }
+    if (!fs.existsSync(exportDir)) fs.mkdirSync(exportDir);
 
-    fileName = `productList.${
+    const fileName = `productList.${
       format === "txt" ? "txt" : format === "csv" ? "csv" : "xlsx"
     }`;
     const filePath = path.join(exportDir, fileName);

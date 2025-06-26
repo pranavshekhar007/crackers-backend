@@ -16,7 +16,16 @@ pincodeController.post("/create", async (req, res) => {
       });
     }
 
-    const created = await Pincode.create({ pincode });
+    // Ensure pincodeId increments safely
+    const last = await Pincode.findOne({}).sort({ pincodeId: -1 });
+    const lastId = last?.pincodeId || 0;
+    const nextPincodeId = Number.isInteger(lastId) ? lastId + 1 : 1;
+
+    const created = await Pincode.create({
+      pincodeId: nextPincodeId,
+      pincode,
+    });
+
     sendResponse(res, 200, "Success", {
       message: "Pincode created successfully!",
       data: created,
@@ -29,6 +38,7 @@ pincodeController.post("/create", async (req, res) => {
     });
   }
 });
+
 
 
 pincodeController.post("/list", async (req, res) => {
@@ -46,8 +56,8 @@ pincodeController.post("/list", async (req, res) => {
       if (status) query.status = status;
       if (searchKey) query.pincode = { $regex: searchKey, $options: "i" };
   
-      const sortField = sortByField || "createdAt";
-      const sortOrder = sortByOrder === "asc" ? 1 : -1;
+      const sortField = sortByField || "pincodeId";
+      const sortOrder = sortByOrder === "desc" ? -1 : 1;
       const sortOption = { [sortField]: sortOrder };
   
       const pincodeList = await Pincode.find(query)
