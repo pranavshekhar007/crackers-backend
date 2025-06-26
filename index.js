@@ -11,12 +11,16 @@ const server = createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: "https://gustosa-backend.vercel.app/api/",
+    origin: [
+      "https://crackers-frontend.vercel.app", // ✅ frontend
+      "http://localhost:3000",                // for dev
+    ],
     methods: ["GET", "POST"],
     credentials: true,
   },
-  transports: ['websocket'], // 👈 disable long-polling
+  transports: ['websocket'], // optional
 });
+
 
 
 
