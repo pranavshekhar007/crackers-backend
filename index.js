@@ -45,7 +45,14 @@ app.use('/uploads', express.static('uploads'))
 const PORT = process.env.PORT || 8000;
 
 
-app.use(cors());
+app.use(cors({
+  origin: [
+    "https://crackers-frontend.vercel.app",  // ✅ your frontend domain
+    "https://crackers-backend.vercel.app",   // optional
+  ],
+  credentials: true,
+}));
+
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
