@@ -39,6 +39,7 @@ areaController.post("/list", async (req, res) => {
       searchKey = "",
       stateId,
       cityId,
+      pincodeId,
       pageNo = 1,
       pageCount = 10,
       sortByField,
@@ -49,6 +50,7 @@ areaController.post("/list", async (req, res) => {
     if (searchKey) query.name = { $regex: searchKey, $options: "i" };
     if (stateId) query.state = stateId;
     if (cityId) query.city = cityId;
+    if (pincodeId) query.pincode = pincodeId;
 
     const sortField = sortByField || "createdAt";
     const sortOrder = sortByOrder === "asc" ? 1 : -1;

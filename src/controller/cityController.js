@@ -117,4 +117,28 @@ cityController.delete("/delete/:id", async (req, res) => {
   }
 });
 
+// Get all cities by stateId (for dropdowns)
+cityController.get("/", async (req, res) => {
+  try {
+    const { stateId } = req.query;
+
+    const query = {};
+    if (stateId) query.state = stateId;
+
+    const cities = await City.find(query).sort({ name: 1 });
+
+    sendResponse(res, 200, "Success", {
+      message: "City list fetched successfully",
+      data: cities,
+      statusCode: 200,
+    });
+  } catch (error) {
+    sendResponse(res, 500, "Failed", {
+      message: error.message,
+      statusCode: 500,
+    });
+  }
+});
+
+
 module.exports = cityController;

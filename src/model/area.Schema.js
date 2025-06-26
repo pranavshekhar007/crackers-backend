@@ -16,7 +16,7 @@ const areaSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "City",
   },
-  Pincode: {
+  pincode: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Pincode",
   },
