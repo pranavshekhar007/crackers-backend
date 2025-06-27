@@ -2,14 +2,18 @@ const mongoose = require("mongoose");
 const timestamps = require("mongoose-timestamp");
 
 const citySchema = new mongoose.Schema({
+  cityId: {
+    type: Number,
+    unique: true,
+    index: true,
+  },
   name: {
     type: String,
     required: true,
     trim: true,
   },
-  state: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "State",
+  stateId: {
+    type: Number,
     required: true,
   },
   minimumPrice: {

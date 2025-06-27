@@ -25,29 +25,49 @@ const getModelByType = (type) => {
   }
 };
 
-// Helper: Get fields to populate by model type
-const getPopulateFields = (type) => {
-  switch (type.toLowerCase()) {
-    case "areas": return ["state", "city", "pincode"];
-    case "cities": return ["state"];
-    default: return [];
-  }
+// Helper: Auto-increment ID field based on model type
+const getNextIdField = async (Model, field) => {
+  const last = await Model.findOne().sort({ [field]: -1 });
+  return last && Number.isInteger(last[field]) ? last[field] + 1 : 1;
 };
 
-// Helper: Convert reference names to IDs
+// Helper: Convert reference names to IDs for upload
 const resolveReferences = async (item, locationType) => {
   if (locationType === "Areas") {
-    const [state, city, pincode] = await Promise.all([
-      State.findOne({ name: item.state }),
-      City.findOne({ name: item.city }),
-      Pincode.findOne({ pincode: item.pincode }),
-    ]);
-    item.state = state?._id;
-    item.city = city?._id;
-    item.pincode = pincode?._id;
+    const state = await State.findOne({ name: item.state });
+    const city = await City.findOne({ name: item.city });
+    const pincode = await Pincode.findOne({ pincode: item.pincode });
+
+    item.stateId = state ? state.stateId : null;
+    item.cityId = city ? city.cityId : null;
+    item.pincodeId = pincode ? pincode.pincodeId : null;
+
+    delete item.state;
+    delete item.city;
+    delete item.pincode;
+
+    if (!item.areaId) {
+      item.areaId = await getNextIdField(Area, "areaId");
+    }
+
   } else if (locationType === "Cities") {
     const state = await State.findOne({ name: item.state });
-    item.state = state?._id;
+    item.stateId = state ? state.stateId : null;
+    delete item.state;
+
+    if (!item.cityId) {
+      item.cityId = await getNextIdField(City, "cityId");
+    }
+
+  } else if (locationType === "States") {
+    if (!item.stateId) {
+      item.stateId = await getNextIdField(State, "stateId");
+    }
+
+  } else if (locationType === "Pincodes") {
+    if (!item.pincodeId) {
+      item.pincodeId = await getNextIdField(Pincode, "pincodeId");
+    }
   }
 };
 
@@ -79,6 +99,7 @@ bulkLocationController.post("/bulk-upload", upload.single("file"), async (req, r
 
     for (const item of json) {
       await resolveReferences(item, locationType);
+
       if (type === "upload") {
         await Model.create(item);
       } else if (type === "update" && item._id) {
@@ -113,19 +134,11 @@ bulkLocationController.post("/bulk-download", async (req, res) => {
       });
     }
 
-    const populateFields = getPopulateFields(locationType);
-    const data = await Model.find({}).populate(populateFields);
+    const data = await Model.find({});
 
     const formatted = data.map((item) => {
       const obj = item.toObject();
-      if (locationType === "Areas") {
-        obj.state = obj.state?.name;
-        obj.city = obj.city?.name;
-        obj.pincode = obj.pincode?.pincode;
-      } else if (locationType === "Cities") {
-        obj.state = obj.state?.name;
-      }
-      return obj;
+      return obj; // Now contains stateId, cityId, pincodeId, areaId fields
     });
 
     const exportDir = "/tmp";

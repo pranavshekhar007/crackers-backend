@@ -7,8 +7,26 @@ const cityController = express.Router();
 
 cityController.post("/create", async (req, res) => {
   try {
-    const { name, state, minimumPrice } = req.body;
-    const cityCreated = await City.create({ name, state, minimumPrice });
+    const { name, stateId, minimumPrice } = req.body;
+
+    if (!name || !stateId || minimumPrice === undefined) {
+      return sendResponse(res, 400, "Failed", {
+        message: "Name, stateId, and minimumPrice are required",
+        statusCode: 400,
+      });
+    }
+
+    // Auto-increment cityId
+    const last = await City.findOne().sort({ cityId: -1 });
+    const nextCityId = last && Number.isInteger(last.cityId) ? last.cityId + 1 : 1;
+
+    const cityCreated = await City.create({
+      cityId: nextCityId,
+      name: name.trim(),
+      stateId,
+      minimumPrice,
+    });
+
     sendResponse(res, 200, "Success", {
       message: "City created successfully!",
       data: cityCreated,
@@ -23,6 +41,7 @@ cityController.post("/create", async (req, res) => {
   }
 });
 
+
 cityController.post("/list", async (req, res) => {
   try {
     const {
@@ -36,26 +55,27 @@ cityController.post("/list", async (req, res) => {
 
     const query = {};
     if (searchKey) query.name = { $regex: searchKey, $options: "i" };
-    if (stateId) query.state = stateId;
+    if (stateId) query.stateId = stateId;
 
-    const sortField = sortByField || "createdAt";
-    const sortOrder = sortByOrder === "asc" ? 1 : -1;
+    const sortField = sortByField || "cityId";
+    const sortOrder = sortByOrder === "desc" ? -1 : 1;
 
     const cities = await City.find(query)
-      .populate("state", "name")
       .sort({ [sortField]: sortOrder })
       .limit(parseInt(pageCount))
       .skip((parseInt(pageNo) - 1) * parseInt(pageCount));
 
     const totalCount = await City.countDocuments({});
-    const stateCount = stateId ? await City.countDocuments({ state: stateId }) : 0;
+    const filteredCount = stateId
+      ? await City.countDocuments({ stateId })
+      : totalCount;
 
     sendResponse(res, 200, "Success", {
       message: "City list retrieved successfully!",
       data: cities,
       documentCount: {
         totalCount,
-        filteredCount: stateId ? stateCount : totalCount,
+        filteredCount,
       },
       statusCode: 200,
     });
@@ -66,6 +86,7 @@ cityController.post("/list", async (req, res) => {
     });
   }
 });
+
 
 cityController.put("/update", async (req, res) => {
   try {
@@ -123,7 +144,7 @@ cityController.get("/", async (req, res) => {
     const { stateId } = req.query;
 
     const query = {};
-    if (stateId) query.state = stateId;
+    if (stateId) query.stateId = stateId;
 
     const cities = await City.find(query).sort({ name: 1 });
 
@@ -139,6 +160,7 @@ cityController.get("/", async (req, res) => {
     });
   }
 });
+
 
 
 module.exports = cityController;

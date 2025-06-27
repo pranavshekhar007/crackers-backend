@@ -6,9 +6,26 @@ const State = require("../model/state.schema")
 const stateController = express.Router();
 
 stateController.post("/create", async (req, res) => {
-    
   try {
-    const stateCreated = await State.create(req.body);
+    const { name } = req.body;
+
+    if (!name) {
+      return sendResponse(res, 400, "Failed", {
+        message: "State name is required",
+        statusCode: 400,
+      });
+    }
+
+    // Ensure stateId increments safely
+    const last = await State.findOne({}).sort({ stateId: -1 });
+    const lastId = last?.stateId || 0;
+    const nextStateId = Number.isInteger(lastId) ? lastId + 1 : 1;
+
+    const stateCreated = await State.create({
+      stateId: nextStateId,
+      name,
+    });
+
     sendResponse(res, 200, "Success", {
       message: "State created successfully!",
       data: stateCreated,
@@ -22,6 +39,7 @@ stateController.post("/create", async (req, res) => {
     });
   }
 });
+
 
 stateController.post("/list", async (req, res) => {
   try {
@@ -38,8 +56,8 @@ stateController.post("/list", async (req, res) => {
     if (status) query.status = status;
     if (searchKey) query.name = { $regex: searchKey, $options: "i" };
 
-    const sortField = sortByField || "createdAt";
-    const sortOrder = sortByOrder === "asc" ? 1 : -1;
+    const sortField = sortByField || "stateId";
+    const sortOrder = sortByOrder === "desc" ? -1 : 1;
     const sortOption = { [sortField]: sortOrder };
 
     const stateList = await State.find(query)

@@ -8,13 +8,25 @@ const areaController = express.Router();
 // Create Area
 areaController.post("/create", async (req, res) => {
   try {
-    const { name, state, city, pincode, minimumPrice, deliveryCharge } = req.body;
+    const { name, stateId, cityId, pincodeId, minimumPrice, deliveryCharge } = req.body;
+
+    if (!name || !stateId || !cityId || !pincodeId || minimumPrice === undefined || deliveryCharge === undefined) {
+      return sendResponse(res, 400, "Failed", {
+        message: "All fields are required",
+        statusCode: 400,
+      });
+    }
+
+    // Auto-increment areaId
+    const last = await Area.findOne().sort({ areaId: -1 });
+    const nextAreaId = last && Number.isInteger(last.areaId) ? last.areaId + 1 : 1;
 
     const areaCreated = await Area.create({
-      name,
-      state,
-      city,
-      pincode,
+      areaId: nextAreaId,
+      name: name.trim(),
+      stateId,
+      cityId,
+      pincodeId,
       minimumPrice,
       deliveryCharge,
     });
@@ -25,6 +37,7 @@ areaController.post("/create", async (req, res) => {
       statusCode: 200,
     });
   } catch (error) {
+    console.error(error);
     sendResponse(res, 500, "Failed", {
       message: error.message,
       statusCode: 500,
@@ -48,17 +61,14 @@ areaController.post("/list", async (req, res) => {
 
     const query = {};
     if (searchKey) query.name = { $regex: searchKey, $options: "i" };
-    if (stateId) query.state = stateId;
-    if (cityId) query.city = cityId;
-    if (pincodeId) query.pincode = pincodeId;
+    if (stateId) query.stateId = stateId;
+    if (cityId) query.cityId = cityId;
+    if (pincodeId) query.pincodeId = pincodeId;
 
-    const sortField = sortByField || "createdAt";
-    const sortOrder = sortByOrder === "asc" ? 1 : -1;
+    const sortField = sortByField || "areaId";
+    const sortOrder = sortByOrder === "desc" ? -1 : 1;
 
     const areas = await Area.find(query)
-      .populate("state", "name")
-      .populate("city", "name")
-      .populate("pincode", "pincode")
       .sort({ [sortField]: sortOrder })
       .limit(parseInt(pageCount))
       .skip((parseInt(pageNo) - 1) * parseInt(pageCount));
@@ -76,6 +86,7 @@ areaController.post("/list", async (req, res) => {
       statusCode: 200,
     });
   } catch (error) {
+    console.error(error);
     sendResponse(res, 500, "Failed", {
       message: error.message,
       statusCode: 500,
@@ -102,6 +113,7 @@ areaController.put("/update", async (req, res) => {
       statusCode: 200,
     });
   } catch (error) {
+    console.error(error);
     sendResponse(res, 500, "Failed", {
       message: error.message,
       statusCode: 500,
@@ -127,6 +139,7 @@ areaController.delete("/delete/:id", async (req, res) => {
       statusCode: 200,
     });
   } catch (error) {
+    console.error(error);
     sendResponse(res, 500, "Failed", {
       message: error.message,
       statusCode: 500,

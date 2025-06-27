@@ -7,6 +7,11 @@ const pincodeSchema = new mongoose.Schema({
     unique: true,
     index: true,
   },
+  cityId: {
+    type: Number,
+    required: true,
+  },
+
   pincode: {
     type: String,
     required: true,
