@@ -25,14 +25,14 @@ const getModelByType = (type) => {
   }
 };
 
-// Helper: Auto-increment ID field based on model type
-const getNextIdField = async (Model, field) => {
+// Helper: Auto-increment IDs for all rows efficiently
+const getStartingIdField = async (Model, field) => {
   const last = await Model.findOne().sort({ [field]: -1 });
   return last && Number.isInteger(last[field]) ? last[field] + 1 : 1;
 };
 
-// Helper: Convert reference names to IDs for upload
-const resolveReferences = async (item, locationType) => {
+// Helper: Convert reference names to IDs for upload with sequential IDs
+const resolveReferences = async (item, locationType, idCounters) => {
   if (locationType === "Areas") {
     const state = await State.findOne({ name: item.state });
     const city = await City.findOne({ name: item.city });
@@ -47,7 +47,7 @@ const resolveReferences = async (item, locationType) => {
     delete item.pincode;
 
     if (!item.areaId) {
-      item.areaId = await getNextIdField(Area, "areaId");
+      item.areaId = idCounters.areaId++;
     }
 
   } else if (locationType === "Cities") {
@@ -56,22 +56,22 @@ const resolveReferences = async (item, locationType) => {
     delete item.state;
 
     if (!item.cityId) {
-      item.cityId = await getNextIdField(City, "cityId");
+      item.cityId = idCounters.cityId++;
     }
 
   } else if (locationType === "States") {
     if (!item.stateId) {
-      item.stateId = await getNextIdField(State, "stateId");
+      item.stateId = idCounters.stateId++;
     }
 
   } else if (locationType === "Pincodes") {
     if (!item.pincodeId) {
-      item.pincodeId = await getNextIdField(Pincode, "pincodeId");
+      item.pincodeId = idCounters.pincodeId++;
     }
   }
 };
 
-// Bulk Upload Endpoint
+
 bulkLocationController.post("/bulk-upload", upload.single("file"), async (req, res) => {
   try {
     const { type, locationType } = req.body;
@@ -87,7 +87,7 @@ bulkLocationController.post("/bulk-upload", upload.single("file"), async (req, r
     const workbook = xlsx.readFile(filePath);
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const json = xlsx.utils.sheet_to_json(sheet);
-    fs.unlinkSync(filePath); // Delete file after reading
+    fs.unlinkSync(filePath);
 
     const Model = getModelByType(locationType);
     if (!Model) {
@@ -97,8 +97,20 @@ bulkLocationController.post("/bulk-upload", upload.single("file"), async (req, r
       });
     }
 
+    // Initialize ID counters
+    const idCounters = {};
+    if (locationType === "States") {
+      idCounters.stateId = await getStartingIdField(State, "stateId");
+    } else if (locationType === "Cities") {
+      idCounters.cityId = await getStartingIdField(City, "cityId");
+    } else if (locationType === "Areas") {
+      idCounters.areaId = await getStartingIdField(Area, "areaId");
+    } else if (locationType === "Pincodes") {
+      idCounters.pincodeId = await getStartingIdField(Pincode, "pincodeId");
+    }
+
     for (const item of json) {
-      await resolveReferences(item, locationType);
+      await resolveReferences(item, locationType, idCounters);
 
       if (type === "upload") {
         await Model.create(item);
@@ -112,6 +124,7 @@ bulkLocationController.post("/bulk-upload", upload.single("file"), async (req, r
       count: json.length,
       statusCode: 200,
     });
+
   } catch (error) {
     console.error("Bulk Upload Error:", error);
     return sendResponse(res, 500, "Failed", {
@@ -120,6 +133,7 @@ bulkLocationController.post("/bulk-upload", upload.single("file"), async (req, r
     });
   }
 });
+
 
 // Bulk Download Endpoint
 bulkLocationController.post("/bulk-download", async (req, res) => {
