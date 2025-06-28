@@ -9,6 +9,7 @@ const upload = require("../utils/multer");
 const auth = require("../utils/auth");
 const fs = require("fs");
 const path = require("path");
+const sendEmail = require("../utils/sendEmail");
 
 
 bookingController.post("/create", async (req, res) => {
@@ -205,7 +206,7 @@ bookingController.put("/update", async (req, res) => {
       });
     }
 
-    const booking = await Booking.findById(id);
+    const booking = await Booking.findById(id).populate("userId");
     if (!booking) {
       return sendResponse(res, 404, "Failed", {
         message: "Booking not found",
@@ -230,14 +231,27 @@ bookingController.put("/update", async (req, res) => {
       statusHistory: booking.statusHistory,
     };
 
-
     const updatedBooking = await Booking.findByIdAndUpdate(
       id,
       updatedFields,
       { new: true }
     )
-      .populate("userId", "firstName lastName")
+      .populate("userId", "firstName lastName email")
       .populate("product.productId", "name description productHeroImage");
+
+    // ✅ Send email if status is orderPlaced
+    if (status === "orderPlaced") {
+      const userEmail = updatedBooking.userId.email;
+      const userName = updatedBooking.userId.firstName;
+
+      const html = `
+        <p>Dear ${userName},</p>
+        <p>Your order with Booking ID <b>${updatedBooking._id}</b> has been placed successfully.</p>
+        <p>Thank you for shopping with us!</p>
+      `;
+
+      await sendEmail(userEmail, "Your Order is Placed!", html);
+    }
 
     return sendResponse(res, 200, "Success", {
       message: "Booking updated successfully",
@@ -252,6 +266,7 @@ bookingController.put("/update", async (req, res) => {
     });
   }
 });
+
 
 
 bookingController.put("/upload/payment-ss", upload.single("paymentSs"), async (req, res) => {

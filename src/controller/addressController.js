@@ -52,8 +52,8 @@ addressController.post("/list", async (req, res) => {
       .limit(parseInt(pageCount))
       .skip(parseInt(pageNo - 1) * parseInt(pageCount))
       .populate({
-        path: "userId", // Field to populate
-        select: "name description", // Specify the fields to retrieve from the category collection
+        path: "userId",
+        select: "name description",
       });
     const totalCount = await Address.countDocuments({});
     const activeCount = await Address.countDocuments({ status: true });

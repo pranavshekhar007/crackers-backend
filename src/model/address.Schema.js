@@ -11,6 +11,10 @@ const addressSchema = mongoose.Schema({
     type: String,
     required: true,
   },
+  email: {
+    type: String,
+    required: true,
+  },
   alternatePhone: {
     type: String,
     required: true,

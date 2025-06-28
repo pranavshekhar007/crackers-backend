@@ -1,6 +1,9 @@
 const express = require("express");
 const { sendResponse } = require("../utils/common");
 const Area = require("../model/area.Schema");
+const State = require("../model/state.schema");
+const City = require("../model/city.Schema");
+const Pincode = require("../model/pincode.Schema");
 require("dotenv").config();
 
 const areaController = express.Router();
@@ -31,9 +34,19 @@ areaController.post("/create", async (req, res) => {
       deliveryCharge,
     });
 
+    // Fetch related data from State, City, Pincode models
+    const state = await State.findOne({ stateId: stateId });
+    const city = await City.findOne({ cityId: cityId });
+    const pincode = await Pincode.findOne({ pincodeId: pincodeId });
+
     sendResponse(res, 200, "Success", {
       message: "Area created successfully!",
-      data: areaCreated,
+      data: {
+        ...areaCreated._doc,
+        state,
+        city,
+        pincode,
+      },
       statusCode: 200,
     });
   } catch (error) {
@@ -44,6 +57,7 @@ areaController.post("/create", async (req, res) => {
     });
   }
 });
+
 
 // List Areas
 areaController.post("/list", async (req, res) => {
@@ -73,12 +87,28 @@ areaController.post("/list", async (req, res) => {
       .limit(parseInt(pageCount))
       .skip((parseInt(pageNo) - 1) * parseInt(pageCount));
 
+    // Fetch state, city, pincode data for each area
+    const areasWithDetails = await Promise.all(
+      areas.map(async (area) => {
+        const state = await State.findOne({ stateId: area.stateId });
+        const city = await City.findOne({ cityId: area.cityId });
+        const pincode = await Pincode.findOne({ pincodeId: area.pincodeId });
+
+        return {
+          ...area._doc,
+          state,
+          city,
+          pincode,
+        };
+      })
+    );
+
     const totalCount = await Area.countDocuments({});
     const filteredCount = await Area.countDocuments(query);
 
     sendResponse(res, 200, "Success", {
       message: "Area list retrieved successfully!",
-      data: areas,
+      data: areasWithDetails,
       documentCount: {
         totalCount,
         filteredCount,
@@ -93,6 +123,7 @@ areaController.post("/list", async (req, res) => {
     });
   }
 });
+
 
 // Update Area
 areaController.put("/update", async (req, res) => {
