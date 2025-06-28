@@ -10,6 +10,7 @@ const auth = require("../utils/auth");
 const fs = require("fs");
 const path = require("path");
 const sendEmail = require("../utils/sendEmail");
+const Address = require("../model/address.Schema");
 
 
 bookingController.post("/create", async (req, res) => {
@@ -197,7 +198,7 @@ bookingController.get("/user/:userId", async (req, res) => {
 
 bookingController.put("/update", async (req, res) => {
   try {
-    const { id, status, ...updateFields } = req.body;
+    const { id, status, addressId, ...updateFields } = req.body;
 
     if (!id) {
       return sendResponse(res, 400, "Failed", {
@@ -214,10 +215,9 @@ bookingController.put("/update", async (req, res) => {
       });
     }
 
-    // Update the statusHistory if the status has changed
+    // Update statusHistory if changed
     if (status && status !== booking.status) {
       if (!booking.statusHistory) booking.statusHistory = [];
-
       booking.statusHistory.push({
         status: status,
         updatedAt: new Date(),
@@ -227,7 +227,7 @@ bookingController.put("/update", async (req, res) => {
     // Merge updated fields including status
     const updatedFields = {
       ...updateFields,
-      ...(status && { status }), // only add status if it exists
+      ...(status && { status }),
       statusHistory: booking.statusHistory,
     };
 
@@ -239,18 +239,29 @@ bookingController.put("/update", async (req, res) => {
       .populate("userId", "firstName lastName email")
       .populate("product.productId", "name description productHeroImage");
 
-    // ✅ Send email if status is orderPlaced
+    // ✅ Send email to Address email if status is orderPlaced
     if (status === "orderPlaced") {
-      const userEmail = updatedBooking.userId.email;
-      const userName = updatedBooking.userId.firstName;
+      let recipientEmail = null;
 
-      const html = `
-        <p>Dear ${userName},</p>
-        <p>Your order with Booking ID <b>${updatedBooking._id}</b> has been placed successfully.</p>
-        <p>Thank you for shopping with us!</p>
-      `;
+      // Fetch address email
+      const address = await Address.findById(booking.addressId);
+      if (address) {
+        recipientEmail = address.email;
+      } else {
+        console.log("No address found for booking, skipping email.");
+      }
 
-      await sendEmail(userEmail, "Your Order is Placed!", html);
+      if (recipientEmail) {
+        const userName = updatedBooking.userId.firstName;
+
+        const html = `
+          <p>Dear ${userName},</p>
+          <p>Your order with Booking ID <b>${updatedBooking._id}</b> has been placed successfully.</p>
+          <p>Thank you for shopping with us!</p>
+        `;
+
+        await sendEmail(recipientEmail, "Your Order is Placed!", html);
+      }
     }
 
     return sendResponse(res, 200, "Success", {
@@ -266,6 +277,7 @@ bookingController.put("/update", async (req, res) => {
     });
   }
 });
+
 
 
 
