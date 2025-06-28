@@ -99,6 +99,8 @@ cityController.put("/update", async (req, res) => {
       });
     }
 
+    delete req.body.cityId; 
+
     const updatedCity = await City.findByIdAndUpdate(_id, req.body, { new: true });
 
     sendResponse(res, 200, "Success", {
