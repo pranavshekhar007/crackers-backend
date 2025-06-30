@@ -2,6 +2,7 @@ const express = require("express");
 const { sendResponse } = require("../utils/common");
 require("dotenv").config();
 const Address = require("../model/address.Schema");
+const Area = require("../model/area.Schema");
 const addressController = express.Router();
 require("dotenv").config();
 const cloudinary = require("../utils/cloudinary");
@@ -10,7 +11,20 @@ const auth = require("../utils/auth");
 
 addressController.post("/create", async (req, res) => {
   try {
-    const addressCreated = await Address.create(req.body);
+    const { area, ...rest } = req.body;
+
+    // Fetch area ObjectId from areaId number or name sent from frontend
+    const areaDetails =
+      (await Area.findOne({ areaId: area })) || (await Area.findById(area));
+    if (!areaDetails) {
+      return sendResponse(res, 404, "Failed", { message: "Area not found" });
+    }
+
+    const addressCreated = await Address.create({
+      ...rest,
+      area: areaDetails._id, // store ObjectId
+    });
+
     sendResponse(res, 200, "Success", {
       message: "Address created successfully!",
       data: addressCreated,
@@ -53,10 +67,16 @@ addressController.post("/list", async (req, res) => {
       .skip(parseInt(pageNo - 1) * parseInt(pageCount))
       .populate({
         path: "userId",
-        select: "name description",
+        select: "name description email",
+      })
+      .populate({
+        path: "area",
+        select: "name minimumPrice deliveryCharge", // fetch needed area fields
       });
+
     const totalCount = await Address.countDocuments({});
     const activeCount = await Address.countDocuments({ status: true });
+
     sendResponse(res, 200, "Success", {
       message: "Address list retrieved successfully!",
       data: addressList,
@@ -79,23 +99,26 @@ addressController.put("/update", async (req, res) => {
   try {
     const id = req.body._id;
 
-    // Find the category by ID
     const addressData = await Address.findById(id);
     if (!addressData) {
-      return sendResponse(res, 404, "Failed", {
-        message: "Address not found",
-      });
+      return sendResponse(res, 404, "Failed", { message: "Address not found" });
     }
 
     let updatedData = { ...req.body };
-    // Update the category in the database
-    const updatedAddress = await Address.findByIdAndUpdate(
-      id,
-      updatedData,
-      {
-        new: true, // Return the updated document
+
+    if (updatedData.area) {
+      const areaDetails =
+        (await Area.findOne({ areaId: updatedData.area })) ||
+        (await Area.findById(updatedData.area));
+      if (!areaDetails) {
+        return sendResponse(res, 404, "Failed", { message: "Area not found" });
       }
-    );
+      updatedData.area = areaDetails._id;
+    }
+
+    const updatedAddress = await Address.findByIdAndUpdate(id, updatedData, {
+      new: true,
+    });
     sendResponse(res, 200, "Success", {
       message: "Address updated successfully!",
       data: updatedAddress,

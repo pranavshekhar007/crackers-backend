@@ -33,6 +33,14 @@ const bookingSchema = mongoose.Schema({
       productHeroImage: { type: String }
     },
   ],
+  comboProduct: [
+    {
+      comboProductId: { type: String, ref: "ComboProduct" },
+      quantity: { type: Number },
+      totalPrice: { type: Number },
+      productHeroImage: { type: String }
+    },
+  ],
 
   shipping: {
     type: String,

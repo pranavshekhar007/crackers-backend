@@ -64,6 +64,9 @@ bookingController.post("/list", async (req, res) => {
         path: "product.productId",
         select: "name description productHeroImage",
       })
+      .populate({
+        path: "comboProduct.comboProductId",
+      })
       .sort(sortOption)
       .skip(parseInt(pageNo - 1) * parseInt(pageCount))
       .limit(parseInt(pageCount))
@@ -198,7 +201,7 @@ bookingController.get("/user/:userId", async (req, res) => {
 
 bookingController.put("/update", async (req, res) => {
   try {
-    const { id, status, addressId, ...updateFields } = req.body;
+    const { id, status, ...updateFields } = req.body;
 
     if (!id) {
       return sendResponse(res, 400, "Failed", {
@@ -215,9 +218,10 @@ bookingController.put("/update", async (req, res) => {
       });
     }
 
-    // Update statusHistory if changed
+    // Update the statusHistory if the status has changed
     if (status && status !== booking.status) {
       if (!booking.statusHistory) booking.statusHistory = [];
+
       booking.statusHistory.push({
         status: status,
         updatedAt: new Date(),
@@ -227,7 +231,7 @@ bookingController.put("/update", async (req, res) => {
     // Merge updated fields including status
     const updatedFields = {
       ...updateFields,
-      ...(status && { status }),
+      ...(status && { status }), // only add status if it exists
       statusHistory: booking.statusHistory,
     };
 
@@ -239,29 +243,18 @@ bookingController.put("/update", async (req, res) => {
       .populate("userId", "firstName lastName email")
       .populate("product.productId", "name description productHeroImage");
 
-    // ✅ Send email to Address email if status is orderPlaced
+    // ✅ Send email if status is orderPlaced
     if (status === "orderPlaced") {
-      let recipientEmail = null;
+      const userEmail = updatedBooking.userId.email;
+      const userName = updatedBooking.userId.firstName;
 
-      // Fetch address email
-      const address = await Address.findById(booking.addressId);
-      if (address) {
-        recipientEmail = address.email;
-      } else {
-        console.log("No address found for booking, skipping email.");
-      }
+      const html = `
+        <p>Dear ${userName},</p>
+        <p>Your order with Booking ID <b>${updatedBooking._id}</b> has been placed successfully.</p>
+        <p>Thank you for shopping with us!</p>
+      `;
 
-      if (recipientEmail) {
-        const userName = updatedBooking.userId.firstName;
-
-        const html = `
-          <p>Dear ${userName},</p>
-          <p>Your order with Booking ID <b>${updatedBooking._id}</b> has been placed successfully.</p>
-          <p>Thank you for shopping with us!</p>
-        `;
-
-        await sendEmail(recipientEmail, "Your Order is Placed!", html);
-      }
+      await sendEmail(userEmail, "Your Order is Placed!", html);
     }
 
     return sendResponse(res, 200, "Success", {
