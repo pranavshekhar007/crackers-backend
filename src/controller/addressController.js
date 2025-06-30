@@ -13,16 +13,16 @@ addressController.post("/create", async (req, res) => {
   try {
     const { area, ...rest } = req.body;
 
-    // Fetch area ObjectId from areaId number or name sent from frontend
-    const areaDetails =
-      (await Area.findOne({ areaId: area })) || (await Area.findById(area));
+    // Fetch area details using areaId number
+    const areaDetails = await Area.findOne({ areaId: Number(area) });
+
     if (!areaDetails) {
       return sendResponse(res, 404, "Failed", { message: "Area not found" });
     }
 
     const addressCreated = await Address.create({
       ...rest,
-      area: areaDetails._id, // store ObjectId
+      areaId: areaDetails.areaId, // store areaId as number
     });
 
     sendResponse(res, 200, "Success", {
@@ -37,6 +37,7 @@ addressController.post("/create", async (req, res) => {
     });
   }
 });
+
 
 addressController.post("/list", async (req, res) => {
   try {
@@ -64,27 +65,22 @@ addressController.post("/list", async (req, res) => {
     const addressList = await Address.find(query)
       .sort(sortOption)
       .limit(parseInt(pageCount))
-      .skip(parseInt(pageNo - 1) * parseInt(pageCount))
-      .populate({
-        path: "userId",
-        select: "name description email",
-      })
-      .populate({
-        path: "area",
-        select: "name minimumPrice deliveryCharge", // fetch needed area fields
-      });
+      .skip(parseInt(pageNo - 1) * parseInt(pageCount));
 
-    const totalCount = await Address.countDocuments({});
-    const activeCount = await Address.countDocuments({ status: true });
+    // manually populate area details
+    const populatedAddresses = await Promise.all(
+      addressList.map(async (address) => {
+        const areaDetails = await Area.findOne({ areaId: address.areaId });
+        return {
+          ...address.toObject(),
+          area: areaDetails, // attach full area object
+        };
+      })
+    );
 
     sendResponse(res, 200, "Success", {
       message: "Address list retrieved successfully!",
-      data: addressList,
-      documentCount: {
-        totalCount,
-        activeCount,
-        inactiveCount: totalCount - activeCount,
-      },
+      data: populatedAddresses,
       statusCode: 200,
     });
   } catch (error) {
@@ -98,27 +94,27 @@ addressController.post("/list", async (req, res) => {
 addressController.put("/update", async (req, res) => {
   try {
     const id = req.body._id;
+    const { area, ...rest } = req.body;
 
     const addressData = await Address.findById(id);
     if (!addressData) {
       return sendResponse(res, 404, "Failed", { message: "Address not found" });
     }
 
-    let updatedData = { ...req.body };
-
-    if (updatedData.area) {
-      const areaDetails =
-        (await Area.findOne({ areaId: updatedData.area })) ||
-        (await Area.findById(updatedData.area));
-      if (!areaDetails) {
-        return sendResponse(res, 404, "Failed", { message: "Area not found" });
-      }
-      updatedData.area = areaDetails._id;
+    const areaDetails = await Area.findOne({ areaId: Number(area) });
+    if (!areaDetails) {
+      return sendResponse(res, 404, "Failed", { message: "Area not found" });
     }
+
+    const updatedData = {
+      ...rest,
+      areaId: areaDetails.areaId,
+    };
 
     const updatedAddress = await Address.findByIdAndUpdate(id, updatedData, {
       new: true,
     });
+
     sendResponse(res, 200, "Success", {
       message: "Address updated successfully!",
       data: updatedAddress,
@@ -131,6 +127,7 @@ addressController.put("/update", async (req, res) => {
     });
   }
 });
+
 
 addressController.delete("/delete/:id", async (req, res) => {
   try {

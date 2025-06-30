@@ -243,10 +243,19 @@ bookingController.put("/update", async (req, res) => {
       .populate("userId", "firstName lastName email")
       .populate("product.productId", "name description productHeroImage");
 
-    // ✅ Send email if status is orderPlaced
+    // ✅ Fetch address email and send email if status is orderPlaced
     if (status === "orderPlaced") {
-      const userEmail = updatedBooking.userId.email;
-      const userName = updatedBooking.userId.firstName;
+      let userEmail = "";
+      let userName = updatedBooking.userId.firstName;
+
+      // Fetch the Address document linked to this booking
+      const addressData = await Address.findOne({ userId: updatedBooking.userId._id });
+
+      if (addressData) {
+        userEmail = addressData.email;
+      } else {
+        userEmail = updatedBooking.userId.email; // fallback to user email if address not found
+      }
 
       const html = `
         <p>Dear ${userName},</p>

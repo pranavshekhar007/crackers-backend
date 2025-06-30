@@ -23,9 +23,8 @@ const addressSchema = mongoose.Schema({
     type: String,
     required: true,
   },
-  area: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Area",
+  areaId: {
+    type: Number,
     required: true,
   },
   
