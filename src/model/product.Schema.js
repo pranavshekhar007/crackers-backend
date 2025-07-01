@@ -22,12 +22,6 @@ const productSchema = mongoose.Schema({
       ref: "Category",
     },
   ],
-  venderId: [
-    {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Vender",
-    },
-  ],
   hsnCode: {
     type: Number,
   },
@@ -88,22 +82,6 @@ const productSchema = mongoose.Schema({
     type: String,
   },
 
-  // step 4 attributes
-  productOtherDetails: [
-    {
-      key: { type: String },
-      value: [{ type: String }],
-    },
-  ],
-  productVariants: [
-    {
-      variantKey: { type: String },
-      variantValue: { type: String },
-      variantPrice: { type: Number },
-      variantDiscountedPrice: { type: Number },
-      variantImage: { type: String },
-    },
-  ],
   status: {
     type: Boolean,
     default: true,

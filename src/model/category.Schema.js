@@ -13,6 +13,7 @@ const categorySchema = mongoose.Schema({
   },
   image: {
     type: String,
+    required: true,
   },
   specialApperence: {
     type: String,
