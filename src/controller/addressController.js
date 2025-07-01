@@ -65,22 +65,27 @@ addressController.post("/list", async (req, res) => {
     const addressList = await Address.find(query)
       .sort(sortOption)
       .limit(parseInt(pageCount))
-      .skip(parseInt(pageNo - 1) * parseInt(pageCount));
-
-    // manually populate area details
-    const populatedAddresses = await Promise.all(
-      addressList.map(async (address) => {
-        const areaDetails = await Area.findOne({ areaId: address.areaId });
-        return {
-          ...address.toObject(),
-          area: areaDetails, // attach full area object
-        };
+      .skip(parseInt(pageNo - 1) * parseInt(pageCount))
+      .populate({
+        path: "userId",
+        select: "name description email",
       })
-    );
+      .populate({
+        path: "area",
+        select: "name minimumPrice deliveryCharge", // fetch needed area fields
+      });
+
+    const totalCount = await Address.countDocuments({});
+    const activeCount = await Address.countDocuments({ status: true });
 
     sendResponse(res, 200, "Success", {
       message: "Address list retrieved successfully!",
-      data: populatedAddresses,
+      data: addressList,
+      documentCount: {
+        totalCount,
+        activeCount,
+        inactiveCount: totalCount - activeCount,
+      },
       statusCode: 200,
     });
   } catch (error) {
