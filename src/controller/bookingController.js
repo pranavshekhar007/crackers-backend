@@ -11,6 +11,7 @@ const fs = require("fs");
 const path = require("path");
 const sendEmail = require("../utils/sendEmail");
 const Address = require("../model/address.Schema");
+const Area = require("../model/area.Schema");
 
 
 bookingController.post("/create", async (req, res) => {
@@ -66,6 +67,7 @@ bookingController.post("/list", async (req, res) => {
       })
       .populate({
         path: "comboProduct.comboProductId",
+        select: "name productHeroImage pricing",
       })
       .sort(sortOption)
       .skip(parseInt(pageNo - 1) * parseInt(pageCount))
@@ -148,20 +150,33 @@ bookingController.get("/details/:id", async (req, res) => {
     const id = req.params.id;
     const booking = await Booking.findOne({ _id: id })
       .populate("userId", "firstName lastName email phone")
-      .populate("product.productId");
+      .populate("product.productId")
+      .populate("comboProduct.comboProductId")
+      .lean(); 
 
-    if (booking) {
-      return sendResponse(res, 200, "Success", {
-        message: "Booking details fetched successfully",
-        data: booking,
-        statusCode: 200,
-      });
-    } else {
+    if (!booking) {
       return sendResponse(res, 404, "Failed", {
         message: "No bookings found",
         statusCode: 404,
       });
     }
+
+    // 🔥 Fetch area name manually
+    if (booking.address?.area) {
+      const areaData = await Area.findById(booking.address.area).lean();
+      if (areaData) {
+        booking.address.area = {
+          _id: areaData._id,
+          name: areaData.name,
+        };
+      }
+    }
+
+    return sendResponse(res, 200, "Success", {
+      message: "Booking details fetched successfully",
+      data: booking,
+      statusCode: 200,
+    });
   } catch (error) {
     return sendResponse(res, 500, "Failed", {
       message: error.message || "Internal server error.",
@@ -169,6 +184,7 @@ bookingController.get("/details/:id", async (req, res) => {
     });
   }
 });
+
 
 
 bookingController.get("/user/:userId", async (req, res) => {

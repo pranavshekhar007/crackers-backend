@@ -8,7 +8,18 @@ const bookingSchema = mongoose.Schema({
   status: {
     type: String,
     default: "pending",
-    enum: [ "pending", "paymentSsUpload", "approved",  "ssRejected", "cancelled", "orderPlaced", "orderPacked", "shipping", "outForDelivery", "completed"],
+    enum: [
+      "pending",
+      "paymentSsUpload",
+      "approved",
+      "ssRejected",
+      "cancelled",
+      "orderPlaced",
+      "orderPacked",
+      "shipping",
+      "outForDelivery",
+      "completed",
+    ],
   },
   signature: {
     type: String,
@@ -30,7 +41,7 @@ const bookingSchema = mongoose.Schema({
       productId: { type: String, ref: "Product" },
       quantity: { type: Number },
       totalPrice: { type: Number },
-      productHeroImage: { type: String }
+      productHeroImage: { type: String },
     },
   ],
   comboProduct: [
@@ -38,9 +49,9 @@ const bookingSchema = mongoose.Schema({
       comboProductId: { type: String, ref: "ComboProduct" },
       quantity: { type: Number },
       totalPrice: { type: Number },
-      productHeroImage: { type: String }
     },
   ],
+
 
   shipping: {
     type: String,
@@ -54,7 +65,6 @@ const bookingSchema = mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
-    
   },
   cityId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -79,7 +89,6 @@ const bookingSchema = mongoose.Schema({
       updatedAt: { type: Date, default: Date.now },
     },
   ],
-
 });
 
 bookingSchema.plugin(timestamps);
