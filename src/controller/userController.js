@@ -4,6 +4,7 @@ require("dotenv").config();
 const Product = require("../model/product.Schema");
 const ComboProduct = require("../model/comboProduct.Schema");
 const Category = require("../model/category.Schema");
+const Banner = require("../model/banner.Schema");
 const SubCategory = require("../model/subCategory.Schema");
 const User = require("../model/user.Schema");
 const Booking = require("../model/booking.Schema");
@@ -692,16 +693,14 @@ userController.put("/update", upload.single("profilePic"), async (req, res) => {
 userController.post("/home-details", async (req, res) => {
   try {
     const homeCategory = await Category.find({});
-    const bestSellerSubCategory = await SubCategory.find({});
-    const homeSubCategory = await SubCategory.find({});
+    const banner = await Banner.find({});
     const trendingProducts = await Product.find({});
     const bestSellerProducts = await Product.find({});
     sendResponse(res, 200, "Success", {
       message: "Home page data fetched successfully!",
       data: {
         homeCategory,
-        bestSellerSubCategory,
-        homeSubCategory,
+        banner,
         trendingProducts,
         bestSellerProducts,
       },

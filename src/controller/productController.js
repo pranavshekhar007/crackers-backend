@@ -164,9 +164,7 @@ productController.get("/details/:id", async (req, res) => {
   try {
     const id = req.params.id;
     const product = await Product.findOne({ _id: id }) .populate("categoryId")
-    // .populate("subCategoryId")
      .populate("brandId")
-    // .populate("zipcodeId");
     const ratingList = await Rating.find({productId:id})
           .populate({
             path: "userId",
