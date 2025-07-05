@@ -686,9 +686,7 @@ productController.post("/filter-list", async (req, res) => {
       name,
       brandId,
       categoryId,
-      subCategoryId,
       price,
-      discountedPrice,
       rating,
       pageNo = 1,
       pageCount = 10,
@@ -702,7 +700,6 @@ productController.post("/filter-list", async (req, res) => {
     if (name) query.name = name;
     if (brandId) query.brandId = brandId;
     if (categoryId) query.categoryId = categoryId;
-    if (subCategoryId) query.subCategoryId = subCategoryId;
     if (price) query.price = price;
     if (rating) query.rating = rating;
 
