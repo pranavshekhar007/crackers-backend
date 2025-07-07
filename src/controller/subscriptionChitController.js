@@ -88,45 +88,56 @@ subscriptionChitController.post("/list", async (req, res) => {
   }
 });
 
+// Update Subscription Chit
 subscriptionChitController.put("/update", upload.single("image"), async (req, res) => {
-  try {
-    const id = req.body._id;
-    const chit = await SubscriptionChit.findById(id);
-
-    if (!chit) {
-      return sendResponse(res, 404, "Failed", {
-        message: "Subscription chit not found",
-        statusCode: 404
+    try {
+      const id = req.body._id;
+      const chit = await SubscriptionChit.findById(id);
+  
+      if (!chit) {
+        return sendResponse(res, 404, "Failed", {
+          message: "Subscription chit not found",
+          statusCode: 404
+        });
+      }
+  
+      let updatedData = { ...req.body };
+  
+      if (updatedData.duration) {
+        const startDate = new Date();
+        const endDate = new Date(startDate);
+        endDate.setMonth(endDate.getMonth() + parseInt(updatedData.duration));
+  
+        updatedData.startDate = startDate;
+        updatedData.endDate = endDate;
+      }
+  
+      // Image upload
+      if (req.file) {
+        if (chit.image) {
+          const publicId = chit.image.split("/").pop().split(".")[0];
+          await cloudinary.uploader.destroy(publicId);
+        }
+        const image = await cloudinary.uploader.upload(req.file.path);
+        updatedData.image = image.url;
+      }
+  
+      const updatedChit = await SubscriptionChit.findByIdAndUpdate(id, updatedData, { new: true });
+  
+      sendResponse(res, 200, "Success", {
+        message: "Subscription chit updated successfully!",
+        data: updatedChit,
+        statusCode: 200
+      });
+    } catch (error) {
+      console.error(error);
+      sendResponse(res, 500, "Failed", {
+        message: error.message || "Internal server error",
+        statusCode: 500
       });
     }
-
-    let updatedData = { ...req.body };
-
-    // Image upload
-    if (req.file) {
-      if (chit.image) {
-        const publicId = chit.image.split("/").pop().split(".")[0];
-        await cloudinary.uploader.destroy(publicId);
-      }
-      const image = await cloudinary.uploader.upload(req.file.path);
-      updatedData.image = image.url;
-    }
-
-    const updatedChit = await SubscriptionChit.findByIdAndUpdate(id, updatedData, { new: true });
-
-    sendResponse(res, 200, "Success", {
-      message: "Subscription chit updated successfully!",
-      data: updatedChit,
-      statusCode: 200
-    });
-  } catch (error) {
-    console.error(error);
-    sendResponse(res, 500, "Failed", {
-      message: error.message || "Internal server error",
-      statusCode: 500
-    });
-  }
-});
+  });
+  
 
 subscriptionChitController.delete("/delete/:id", async (req, res) => {
   try {
