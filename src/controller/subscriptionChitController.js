@@ -8,7 +8,7 @@ require("dotenv").config();
 
 subscriptionChitController.post("/create", upload.single("image"), async (req, res) => {
     try {
-      const { name, duration, price, discountRate, userId, status } = req.body;
+      const { name, phone, email, location, duration, price, discountRate, status } = req.body;
   
       if (duration < 3) {
         return sendResponse(res, 400, "Failed", {
@@ -23,12 +23,14 @@ subscriptionChitController.post("/create", upload.single("image"), async (req, r
   
       let obj = {
         name,
+        phone,
+        email,
+        location,
         duration,
         price,
         discountRate,
         startDate,
         endDate,
-        userId,
         status
       };
   
