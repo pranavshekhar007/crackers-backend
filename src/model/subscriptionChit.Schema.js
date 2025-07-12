@@ -1,18 +1,49 @@
 const mongoose = require("mongoose");
 const timestamps = require("mongoose-timestamp");
 
-const subscriptionChitSchema = new mongoose.Schema({
-  name: { type: String },
-  phone: { type: String },
-  email: { type: String },
-  location: { type: String },
-  duration: { type: Number },
-  price: { type: String },
-  discountRate: { type: Number, default: 0 },
-  image: { type: String },
-  startDate: { type: Date },
-  endDate: { type: Date },
-  status: { type: Boolean, default: true },
+const subscriptionChitSchema = mongoose.Schema({
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+  },
+  totalAmount: {
+    type: Number,
+  },
+  monthlyAmount: {
+    type: Number,
+  },
+  totalMonths: {
+    type: Number,
+  },
+  enrolmentDate: {
+    type: Date,
+    default: Date.now,
+  },
+  schemeStartDate: {
+    type: Date,
+  },
+  schemeEndDate: {
+    type: Date,
+  },
+  paidMonths: [
+    {
+      monthNumber: Number,
+      paymentDate: Date,
+      screenshotURL: String,
+      status: {
+        type: String,
+        enum: ["pending", "approved", "rejected"],
+        default: "pending",
+      },
+    },
+  ],
+  paymentSs: {
+    type: String,
+  },
+  status: {
+    type: Boolean,
+    default: true,
+  },
 });
 
 subscriptionChitSchema.plugin(timestamps);

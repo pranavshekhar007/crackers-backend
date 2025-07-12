@@ -38,6 +38,7 @@ const pincodeController = require("./controller/pincodeController");
 const areaController = require("./controller/areaController");
 const bulkLocationController = require("./controller/bulkLocationController");
 const subscriptionChitController = require("./controller/subscriptionChitController");
+const schemeConfigController = require("./controller/schemeConfigController");
 
 router.use("/user", userController);
 router.use("/driver", driverController);
@@ -77,5 +78,6 @@ router.use("/pin-code", pincodeController);
 router.use("/area", areaController);
 router.use("/bulk-location", bulkLocationController);
 router.use("/subscription", subscriptionChitController);
+router.use("/scheme", schemeConfigController);
 
 module.exports = router;

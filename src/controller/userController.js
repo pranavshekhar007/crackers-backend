@@ -667,10 +667,9 @@ userController.put("/update", upload.single("profilePic"), async (req, res) => {
     }
     updatedData.profileStatus = "completed";
     const updatedUser = await User.findByIdAndUpdate(id, updatedData, {
-      new: true, // Return the updated document
+      new: true,
     });
 
-    // ✅ Emit the event after updating
     req.io.emit("userUpdated", {
       message: "User profile updated",
       userId: updatedUser._id,

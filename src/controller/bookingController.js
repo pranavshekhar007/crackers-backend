@@ -12,6 +12,7 @@ const path = require("path");
 const sendEmail = require("../utils/sendEmail");
 const Address = require("../model/address.Schema");
 const Area = require("../model/area.Schema");
+const Coupon = require("../model/coupon.Schema");
 
 
 bookingController.post("/create", async (req, res) => {
@@ -20,6 +21,43 @@ bookingController.post("/create", async (req, res) => {
     const bookingData = {
       ...req.body,
     };
+
+    let couponId = req.body.couponId;
+    
+        if (couponId) {
+          const coupon = await Coupon.findOne({  _id:couponId });
+    
+          if (!coupon) {
+            return sendResponse(res, 400, "Failed", {
+              message: "Invalid coupon code",
+              statusCode: 400,
+            });
+          }
+    
+          const now = new Date();
+     
+          const isValid =
+            coupon.status === "active" &&
+            now >= new Date(coupon.validFrom) &&
+            now <= new Date(coupon.validTo) &&
+            totalAmount >= coupon.minimumOrderAmount;
+    
+          if (!isValid) {
+            return sendResponse(res, 400, "Failed", {
+              message: "Coupon is not valid at this time or order amount is too low.",
+              statusCode: 400,
+            });
+          }
+          if (coupon.usedCount == coupon.usageLimit) {
+            return sendResponse(res, 400, "Failed", {
+              message: "Coupon is not valid, reach the maximum use.",
+              statusCode: 400,
+            });
+          }
+          await Coupon.findByIdAndUpdate(couponId, { $set: { usedCount:coupon.usedCount + 1  } },
+            { new: true })
+        }
+    
 
     const bookingCreated = await Booking.create(bookingData);
 

@@ -9,7 +9,17 @@ const userSchema = mongoose.Schema({
   lastName: {
     type: String,
   },
-  
+  subscriptionDetails: {
+    subscriptionId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "SubscriptionChit",
+    },
+    planName: { type: String },
+    planPrice: { type: String },
+    duration: { type: Number },
+    startDate: { type: Date },
+    endDate: { type: Date },
+  },
   email: {
     type: String,
   },
