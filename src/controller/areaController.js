@@ -180,32 +180,32 @@ areaController.delete("/delete/:id", async (req, res) => {
 
 
 // Get Areas by pincodeId (for dropdowns)
-areaController.post("/get-by-pincode", async (req, res) => {
-  try {
-    const { pincodeId } = req.body;
+// areaController.post("/get-by-pincode", async (req, res) => {
+//   try {
+//     const { pincodeId } = req.body;
 
-    if (!pincodeId) {
-      return sendResponse(res, 400, "Failed", {
-        message: "pincodeId is required",
-        statusCode: 400,
-      });
-    }
+//     if (!pincodeId) {
+//       return sendResponse(res, 400, "Failed", {
+//         message: "pincodeId is required",
+//         statusCode: 400,
+//       });
+//     }
 
-    const areas = await Area.find({ pincodeId, status: true }).sort({ name: 1 });
+//     const areas = await Area.find({ pincodeId, status: true }).sort({ name: 1 });
 
-    sendResponse(res, 200, "Success", {
-      message: "Areas fetched by pincodeId successfully!",
-      data: areas,
-      statusCode: 200,
-    });
-  } catch (error) {
-    console.error(error);
-    sendResponse(res, 500, "Failed", {
-      message: error.message || "Internal server error",
-      statusCode: 500,
-    });
-  }
-});
+//     sendResponse(res, 200, "Success", {
+//       message: "Areas fetched by pincodeId successfully!",
+//       data: areas,
+//       statusCode: 200,
+//     });
+//   } catch (error) {
+//     console.error(error);
+//     sendResponse(res, 500, "Failed", {
+//       message: error.message || "Internal server error",
+//       statusCode: 500,
+//     });
+//   }
+// });
 
 
 module.exports = areaController;

@@ -153,32 +153,32 @@ pincodeController.delete("/delete/:id", async (req, res) => {
 });
 
 // Get pincodes by cityId
-pincodeController.post("/get-by-city", async (req, res) => {
-  try {
-    const { cityId } = req.body;
+// pincodeController.post("/get-by-city", async (req, res) => {
+//   try {
+//     const { cityId } = req.body;
 
-    if (!cityId) {
-      return sendResponse(res, 400, "Failed", {
-        message: "cityId is required",
-        statusCode: 400,
-      });
-    }
+//     if (!cityId) {
+//       return sendResponse(res, 400, "Failed", {
+//         message: "cityId is required",
+//         statusCode: 400,
+//       });
+//     }
 
-    const pincodes = await Pincode.find({ cityId });
+//     const pincodes = await Pincode.find({ cityId });
 
-    sendResponse(res, 200, "Success", {
-      message: "Pincode list fetched by cityId successfully!",
-      data: pincodes,
-      statusCode: 200,
-    });
-  } catch (error) {
-    console.error(error);
-    sendResponse(res, 500, "Failed", {
-      message: error.message || "Internal server error",
-      statusCode: 500,
-    });
-  }
-});
+//     sendResponse(res, 200, "Success", {
+//       message: "Pincode list fetched by cityId successfully!",
+//       data: pincodes,
+//       statusCode: 200,
+//     });
+//   } catch (error) {
+//     console.error(error);
+//     sendResponse(res, 500, "Failed", {
+//       message: error.message || "Internal server error",
+//       statusCode: 500,
+//     });
+//   }
+// });
 
 
 module.exports = pincodeController;
