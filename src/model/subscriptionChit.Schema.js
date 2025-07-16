@@ -6,6 +6,18 @@ const subscriptionChitSchema = mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
   },
+  name:{
+    type: String,
+  },
+  phone: {
+    type: Number,
+  },
+  email:{
+    type: String,
+  },
+  location: {
+    type:String,
+  },
   totalAmount: {
     type: Number,
   },
@@ -29,7 +41,7 @@ const subscriptionChitSchema = mongoose.Schema({
     {
       monthNumber: Number,
       paymentDate: Date,
-      screenshotURL: String,
+      screenshotURL: [String],
       status: {
         type: String,
         enum: ["pending", "approved", "rejected"],

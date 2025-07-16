@@ -15,7 +15,7 @@ const comboProductSchema = new mongoose.Schema(
         },
         quantity: {
           type: Number,
-        }
+        },
       }
     ],
 

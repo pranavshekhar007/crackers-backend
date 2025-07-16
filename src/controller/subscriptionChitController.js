@@ -9,7 +9,7 @@ const SchemeConfig = require("../model/schemeConfig.Schema");
 
 subscriptionChitController.post("/create", async (req, res) => {
   try {
-    const { userId, totalAmount } = req.body;
+    const { userId, totalAmount, name, phone, email, location } = req.body;
 
     const config = await SchemeConfig.findOne();
     if (!config) {
@@ -33,6 +33,10 @@ subscriptionChitController.post("/create", async (req, res) => {
     const chitCreated = await SubscriptionChit.create({
       userId,
       totalAmount,
+      name,
+      phone,
+      email,
+      location,
       monthlyAmount,
       totalMonths: monthsDiff,
       schemeStartDate: start,
@@ -53,7 +57,6 @@ subscriptionChitController.post("/create", async (req, res) => {
     });
   }
 });
-
 
 /**
  * List chit subscriptions
@@ -124,11 +127,15 @@ subscriptionChitController.put("/update", async (req, res) => {
       });
     }
 
-    const monthIndex = chit.paidMonths.findIndex((m) => m.monthNumber == monthNumber);
+    const monthIndex = chit.paidMonths.findIndex(
+      (m) => m.monthNumber == monthNumber
+    );
 
     if (monthIndex >= 0) {
-      chit.paidMonths[monthIndex].paymentDate = paymentDate || chit.paidMonths[monthIndex].paymentDate;
-      chit.paidMonths[monthIndex].status = action || chit.paidMonths[monthIndex].status;
+      chit.paidMonths[monthIndex].paymentDate =
+        paymentDate || chit.paidMonths[monthIndex].paymentDate;
+      chit.paidMonths[monthIndex].status =
+        action || chit.paidMonths[monthIndex].status;
     } else {
       chit.paidMonths.push({
         monthNumber,
@@ -212,65 +219,79 @@ subscriptionChitController.delete("/delete/:id", async (req, res) => {
   }
 });
 
-subscriptionChitController.put("/upload/payment-ss", upload.single("paymentSs"), async (req, res) => {
-  try {
-    const { chitId, monthNumber } = req.body;
+subscriptionChitController.put(
+  "/upload/payment-ss",
+  upload.single("paymentSs"),
+  async (req, res) => {
+    try {
+      const { chitId, monthNumber } = req.body;
 
-    const chit = await SubscriptionChit.findById(chitId);
-    if (!chit) {
-      return sendResponse(res, 404, "Failed", {
-        message: "Subscription chit not found",
-        statusCode: 404,
+      const chit = await SubscriptionChit.findById(chitId);
+      if (!chit) {
+        return sendResponse(res, 404, "Failed", {
+          message: "Subscription chit not found",
+          statusCode: 404,
+        });
+      }
+
+      if (!monthNumber) {
+        return sendResponse(res, 400, "Failed", {
+          message: "monthNumber is required",
+          statusCode: 400,
+        });
+      }
+
+      let screenshotURL = "";
+      if (req.file) {
+        const uploaded = await cloudinary.uploader.upload(req.file.path);
+        screenshotURL = uploaded.url;
+      } else {
+        return sendResponse(res, 400, "Failed", {
+          message: "No payment screenshot uploaded",
+          statusCode: 400,
+        });
+      }
+
+      const monthIndex = chit.paidMonths.findIndex(
+        (m) => m.monthNumber == monthNumber
+      );
+
+      if (monthIndex >= 0) {
+        // If screenshots array exists, push new URL
+        if (Array.isArray(chit.paidMonths[monthIndex].screenshotURL)) {
+          chit.paidMonths[monthIndex].screenshotURL.push(screenshotURL);
+        } else {
+          // Initialize as array if undefined
+          chit.paidMonths[monthIndex].screenshotURL = [screenshotURL];
+        }
+        chit.paidMonths[monthIndex].paymentDate = new Date();
+        chit.paidMonths[monthIndex].status = "pending";
+      } else {
+        // If month entry doesn't exist, create with screenshotURL as array
+        chit.paidMonths.push({
+          monthNumber,
+          paymentDate: new Date(),
+          screenshotURL: [screenshotURL],
+          status: "pending",
+        });
+      }
+
+      await chit.save();
+
+      sendResponse(res, 200, "Success", {
+        message: "Payment screenshot uploaded successfully!",
+        data: chit,
+        statusCode: 200,
+      });
+    } catch (error) {
+      console.error(error);
+      sendResponse(res, 500, "Failed", {
+        message: error.message || "Internal server error",
+        statusCode: 500,
       });
     }
-
-    if (!monthNumber) {
-      return sendResponse(res, 400, "Failed", {
-        message: "monthNumber is required",
-        statusCode: 400,
-      });
-    }
-
-    let screenshotURL = "";
-    if (req.file) {
-      const uploaded = await cloudinary.uploader.upload(req.file.path);
-      screenshotURL = uploaded.url;
-    } else {
-      return sendResponse(res, 400, "Failed", {
-        message: "No payment screenshot uploaded",
-        statusCode: 400,
-      });
-    }
-
-    const monthIndex = chit.paidMonths.findIndex((m) => m.monthNumber == monthNumber);
-
-    if (monthIndex >= 0) {
-      chit.paidMonths[monthIndex].screenshotURL = screenshotURL;
-      chit.paidMonths[monthIndex].status = "pending";
-    } else {
-      chit.paidMonths.push({
-        monthNumber,
-        paymentDate: new Date(),
-        screenshotURL,
-        status: "pending",
-      });
-    }
-
-    await chit.save();
-
-    sendResponse(res, 200, "Success", {
-      message: "Payment screenshot uploaded successfully!",
-      data: chit,
-      statusCode: 200,
-    });
-  } catch (error) {
-    console.error(error);
-    sendResponse(res, 500, "Failed", {
-      message: error.message || "Internal server error",
-      statusCode: 500,
-    });
   }
-});
+);
 
 
 module.exports = subscriptionChitController;

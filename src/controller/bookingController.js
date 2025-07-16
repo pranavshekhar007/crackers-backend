@@ -14,56 +14,61 @@ const Address = require("../model/address.Schema");
 const Area = require("../model/area.Schema");
 const Coupon = require("../model/coupon.Schema");
 
-
 bookingController.post("/create", async (req, res) => {
   try {
-
     const bookingData = {
       ...req.body,
     };
 
     let couponId = req.body.couponId;
-    
-        if (couponId) {
-          const coupon = await Coupon.findOne({  _id:couponId });
-    
-          if (!coupon) {
-            return sendResponse(res, 400, "Failed", {
-              message: "Invalid coupon code",
-              statusCode: 400,
-            });
-          }
-    
-          const now = new Date();
-     
-          const isValid =
-            coupon.status === "active" &&
-            now >= new Date(coupon.validFrom) &&
-            now <= new Date(coupon.validTo) &&
-            totalAmount >= coupon.minimumOrderAmount;
-    
-          if (!isValid) {
-            return sendResponse(res, 400, "Failed", {
-              message: "Coupon is not valid at this time or order amount is too low.",
-              statusCode: 400,
-            });
-          }
-          if (coupon.usedCount == coupon.usageLimit) {
-            return sendResponse(res, 400, "Failed", {
-              message: "Coupon is not valid, reach the maximum use.",
-              statusCode: 400,
-            });
-          }
-          await Coupon.findByIdAndUpdate(couponId, { $set: { usedCount:coupon.usedCount + 1  } },
-            { new: true })
-        }
-    
+
+    if (couponId) {
+      const coupon = await Coupon.findOne({ _id: couponId });
+
+      if (!coupon) {
+        return sendResponse(res, 400, "Failed", {
+          message: "Invalid coupon code",
+          statusCode: 400,
+        });
+      }
+
+      const now = new Date();
+
+      const isValid =
+        coupon.status === "active" &&
+        now >= new Date(coupon.validFrom) &&
+        now <= new Date(coupon.validTo) &&
+        totalAmount >= coupon.minimumOrderAmount;
+
+      if (!isValid) {
+        return sendResponse(res, 400, "Failed", {
+          message:
+            "Coupon is not valid at this time or order amount is too low.",
+          statusCode: 400,
+        });
+      }
+      if (coupon.usedCount == coupon.usageLimit) {
+        return sendResponse(res, 400, "Failed", {
+          message: "Coupon is not valid, reach the maximum use.",
+          statusCode: 400,
+        });
+      }
+      await Coupon.findByIdAndUpdate(
+        couponId,
+        { $set: { usedCount: coupon.usedCount + 1 } },
+        { new: true }
+      );
+    }
 
     const bookingCreated = await Booking.create(bookingData);
 
+    const populatedBooking = await Booking.findById(bookingCreated._id)
+      .populate("product.productId")
+      .populate("comboProduct.comboProductId");
+
     sendResponse(res, 200, "Success", {
       message: "Booking created successfully!",
-      data: bookingCreated,
+      data: populatedBooking,
       statusCode: 200,
     });
   } catch (error) {
@@ -109,8 +114,7 @@ bookingController.post("/list", async (req, res) => {
       })
       .sort(sortOption)
       .skip(parseInt(pageNo - 1) * parseInt(pageCount))
-      .limit(parseInt(pageCount))
-      
+      .limit(parseInt(pageCount));
 
     const totalCount = await Booking.countDocuments(query);
 
@@ -182,7 +186,6 @@ bookingController.post("/list", async (req, res) => {
   }
 });
 
-
 bookingController.get("/details/:id", async (req, res) => {
   try {
     const id = req.params.id;
@@ -190,7 +193,7 @@ bookingController.get("/details/:id", async (req, res) => {
       .populate("userId", "firstName lastName email phone")
       .populate("product.productId")
       .populate("comboProduct.comboProductId")
-      .lean(); 
+      .lean();
 
     if (!booking) {
       return sendResponse(res, 404, "Failed", {
@@ -199,14 +202,17 @@ bookingController.get("/details/:id", async (req, res) => {
       });
     }
 
-    // 🔥 Fetch area name manually
     if (booking.address?.area) {
-      const areaData = await Area.findById(booking.address.area).lean();
+      const areaData = await Area.findOne({
+        name: booking.address.area,
+      }).lean();
       if (areaData) {
         booking.address.area = {
           _id: areaData._id,
           name: areaData.name,
         };
+      } else {
+        booking.address.area = { name: booking.address.area }; // fallback
       }
     }
 
@@ -223,15 +229,14 @@ bookingController.get("/details/:id", async (req, res) => {
   }
 });
 
-
-
 bookingController.get("/user/:userId", async (req, res) => {
   try {
-    console.log("Hello :" ,req.params.userId);
+    console.log("Hello :", req.params.userId);
     const userId = req.params.userId;
     const booking = await Booking.find({ userId: userId })
       .populate("product.productId")
-      .populate("userId");
+      .populate("userId")
+      .populate("comboProduct.comboProductId");
 
     if (booking.length > 0) {
       return sendResponse(res, 200, "Success", {
@@ -289,11 +294,9 @@ bookingController.put("/update", async (req, res) => {
       statusHistory: booking.statusHistory,
     };
 
-    const updatedBooking = await Booking.findByIdAndUpdate(
-      id,
-      updatedFields,
-      { new: true }
-    )
+    const updatedBooking = await Booking.findByIdAndUpdate(id, updatedFields, {
+      new: true,
+    })
       .populate("userId", "firstName lastName email")
       .populate("product.productId", "name description productHeroImage");
 
@@ -303,7 +306,9 @@ bookingController.put("/update", async (req, res) => {
       let userName = updatedBooking.userId.firstName;
 
       // Fetch the Address document linked to this booking
-      const addressData = await Address.findOne({ userId: updatedBooking.userId._id });
+      const addressData = await Address.findOne({
+        userId: updatedBooking.userId._id,
+      });
 
       if (addressData) {
         userEmail = addressData.email;
@@ -334,10 +339,10 @@ bookingController.put("/update", async (req, res) => {
   }
 });
 
-
-
-
-bookingController.put("/upload/payment-ss", upload.single("paymentSs"), async (req, res) => {
+bookingController.put(
+  "/upload/payment-ss",
+  upload.single("paymentSs"),
+  async (req, res) => {
     try {
       const bookingId = req.body.id;
 
@@ -352,7 +357,9 @@ bookingController.put("/upload/payment-ss", upload.single("paymentSs"), async (r
       let updatedData = { ...req.body };
 
       if (req.file) {
-        const paymentScreenshot = await cloudinary.uploader.upload(req.file.path);
+        const paymentScreenshot = await cloudinary.uploader.upload(
+          req.file.path
+        );
         updatedData.paymentSs = paymentScreenshot.url;
       }
 
@@ -376,6 +383,5 @@ bookingController.put("/upload/payment-ss", upload.single("paymentSs"), async (r
     }
   }
 );
-
 
 module.exports = bookingController;

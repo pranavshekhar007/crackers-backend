@@ -49,6 +49,8 @@ const bookingSchema = mongoose.Schema({
       comboProductId: { type: String, ref: "ComboProduct" },
       quantity: { type: Number },
       totalPrice: { type: Number },
+      productHeroImage: { type: String },
+      productName: { type: String }, 
     },
   ],
 
