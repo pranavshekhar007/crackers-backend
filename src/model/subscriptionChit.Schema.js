@@ -39,9 +39,10 @@ const subscriptionChitSchema = mongoose.Schema({
   },
   paidMonths: [
     {
-      monthNumber: Number,
+      monthNumber: String,
+      monthYear: String, 
       paymentDate: Date,
-      screenshotURL: [String],
+      paymentSs: String,
       status: {
         type: String,
         enum: ["pending", "approved", "rejected"],
@@ -49,13 +50,14 @@ const subscriptionChitSchema = mongoose.Schema({
       },
     },
   ],
-  paymentSs: {
+   status: {
     type: String,
+    enum: ["pending", "approved", "rejected"],
+    default: "pending",
   },
-  status: {
-    type: Boolean,
-    default: true,
-  },
+  password: {
+    type: String,
+  }
 });
 
 subscriptionChitSchema.plugin(timestamps);
