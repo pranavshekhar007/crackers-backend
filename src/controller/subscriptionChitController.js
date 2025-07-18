@@ -10,9 +10,9 @@ const bcrypt = require("bcrypt");
 const { generateRandomPassword } = require("../utils/password");
 const sendEmail = require("../utils/sendEmail");
 
-subscriptionChitController.put("/buy", async (req, res) => {
+subscriptionChitController.post("/create", async (req, res) => {
   try {
-    const { chitSubscriptionSignUpId, totalAmount } = req.body;
+    const { userId, chitSubscriptionSignUpId, totalAmount } = req.body;
 
     const chit = await SubscriptionChit.findById(chitSubscriptionSignUpId);
     if (!chit) {
@@ -41,7 +41,7 @@ subscriptionChitController.put("/buy", async (req, res) => {
 
     const monthlyAmount = Math.ceil(totalAmount / monthsDiff);
 
-    // Update chit subscription with purchase details
+    chit.userId = userId; 
     chit.totalAmount = totalAmount;
     chit.monthlyAmount = monthlyAmount;
     chit.totalMonths = monthsDiff;
@@ -64,6 +64,7 @@ subscriptionChitController.put("/buy", async (req, res) => {
     });
   }
 });
+
 
 
 /**
@@ -494,8 +495,8 @@ subscriptionChitController.post("/subscription-users/list", async (req, res) => 
     } = req.body;
 
     const query = {};
-    if (status) query.status = status;
     if (userId) query.userId = userId;
+    if (status) query.status = status;
 
     if (searchKey) {
       query.$or = [
@@ -516,6 +517,37 @@ subscriptionChitController.post("/subscription-users/list", async (req, res) => 
       message: "Subscription chit users list retrieved successfully",
       data: chitUsers,
       totalCount,
+      statusCode: 200,
+    });
+  } catch (error) {
+    console.error(error);
+    sendResponse(res, 500, "Failed", {
+      message: error.message || "Internal server error",
+      statusCode: 500,
+    });
+  }
+});
+
+
+/**
+ * List subscriptions purchased by a chit user
+ */
+subscriptionChitController.post("/my-subscriptions", async (req, res) => {
+  try {
+    const { userId } = req.body;
+
+    if (!userId) {
+      return sendResponse(res, 400, "Failed", {
+        message: "User ID is required",
+        statusCode: 400,
+      });
+    }
+
+    const subscriptions = await SubscriptionChit.find({ _id: userId }).populate("userId");
+
+    sendResponse(res, 200, "Success", {
+      message: "Subscriptions retrieved successfully",
+      data: subscriptions,
       statusCode: 200,
     });
   } catch (error) {

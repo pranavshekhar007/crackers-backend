@@ -17,7 +17,6 @@ const addressSchema = mongoose.Schema({
   },
   alternatePhone: {
     type: String,
-    required: true,
   },
   landmark: {
     type: String,
@@ -25,7 +24,6 @@ const addressSchema = mongoose.Schema({
   },
   area: {
     type: String,
-    required: true,
   },
   
   city: {
