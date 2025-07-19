@@ -9,63 +9,62 @@ const SchemeConfig = require("../model/schemeConfig.Schema");
 const bcrypt = require("bcrypt");
 const { generateRandomPassword } = require("../utils/password");
 const sendEmail = require("../utils/sendEmail");
+const User = require("../model/user.Schema");
 
-subscriptionChitController.post("/create", async (req, res) => {
-  try {
-    const { userId, chitSubscriptionSignUpId, totalAmount } = req.body;
+// subscriptionChitController.post("/create", async (req, res) => {
+//   try {
+//     const { userId, chitSubscriptionSignUpId, totalAmount } = req.body;
 
-    const chit = await SubscriptionChit.findById(chitSubscriptionSignUpId);
-    if (!chit) {
-      return sendResponse(res, 404, "Failed", {
-        message: "Subscription chit not found",
-        statusCode: 404,
-      });
-    }
+//     const chit = await SubscriptionChit.findById(chitSubscriptionSignUpId);
+//     if (!chit) {
+//       return sendResponse(res, 404, "Failed", {
+//         message: "Subscription chit not found",
+//         statusCode: 404,
+//       });
+//     }
 
-    const config = await SchemeConfig.findOne();
-    if (!config) {
-      return sendResponse(res, 404, "Failed", {
-        message: "Scheme config not found. Contact admin.",
-        statusCode: 404,
-      });
-    }
+//     const config = await SchemeConfig.findOne();
+//     if (!config) {
+//       return sendResponse(res, 404, "Failed", {
+//         message: "Scheme config not found. Contact admin.",
+//         statusCode: 404,
+//       });
+//     }
 
-    const enrolmentDate = new Date();
-    const start = config.schemeStartDate;
-    const end = config.schemeEndDate;
+//     const enrolmentDate = new Date();
+//     const start = config.schemeStartDate;
+//     const end = config.schemeEndDate;
 
-    const monthsDiff =
-      (end.getFullYear() - enrolmentDate.getFullYear()) * 12 +
-      (end.getMonth() - enrolmentDate.getMonth()) +
-      1;
+//     const monthsDiff =
+//       (end.getFullYear() - enrolmentDate.getFullYear()) * 12 +
+//       (end.getMonth() - enrolmentDate.getMonth()) +
+//       1;
 
-    const monthlyAmount = Math.ceil(totalAmount / monthsDiff);
+//     const monthlyAmount = Math.ceil(totalAmount / monthsDiff);
 
-    chit.userId = userId; 
-    chit.totalAmount = totalAmount;
-    chit.monthlyAmount = monthlyAmount;
-    chit.totalMonths = monthsDiff;
-    chit.schemeStartDate = start;
-    chit.schemeEndDate = end;
-    chit.enrolmentDate = enrolmentDate;
+//     chit.userId = userId;
+//     chit.totalAmount = totalAmount;
+//     chit.monthlyAmount = monthlyAmount;
+//     chit.totalMonths = monthsDiff;
+//     chit.schemeStartDate = start;
+//     chit.schemeEndDate = end;
+//     chit.enrolmentDate = enrolmentDate;
 
-    await chit.save();
+//     await chit.save();
 
-    sendResponse(res, 200, "Success", {
-      message: "Subscription chit purchased successfully!",
-      data: chit,
-      statusCode: 200,
-    });
-  } catch (error) {
-    console.error(error);
-    sendResponse(res, 500, "Failed", {
-      message: error.message || "Internal server error",
-      statusCode: 500,
-    });
-  }
-});
-
-
+//     sendResponse(res, 200, "Success", {
+//       message: "Subscription chit purchased successfully!",
+//       data: chit,
+//       statusCode: 200,
+//     });
+//   } catch (error) {
+//     console.error(error);
+//     sendResponse(res, 500, "Failed", {
+//       message: error.message || "Internal server error",
+//       statusCode: 500,
+//     });
+//   }
+// });
 
 /**
  * List chit subscriptions
@@ -124,6 +123,7 @@ subscriptionChitController.post("/create", async (req, res) => {
 /**
  * Update chit subscription or payment approval
  */
+
 subscriptionChitController.put(
   "/update",
   upload.single("paymentSs"),
@@ -196,9 +196,6 @@ subscriptionChitController.put(
   }
 );
 
-
-
-
 /**
  * Get chit subscription details by ID
  */
@@ -258,59 +255,53 @@ subscriptionChitController.delete("/delete/:id", async (req, res) => {
   }
 });
 
-subscriptionChitController.put(
-  "/update/payment-status",
-  async (req, res) => {
-    try {
-      const { chitId, monthNumber, status } = req.body;
+subscriptionChitController.put("/update/payment-status", async (req, res) => {
+  try {
+    const { chitId, monthNumber, status } = req.body;
 
-      const chit = await SubscriptionChit.findById(chitId);
-      if (!chit) {
-        return sendResponse(res, 404, "Failed", {
-          message: "Subscription chit not found",
-          statusCode: 404,
-        });
-      }
-
-      const monthIndex = chit.paidMonths.findIndex(
-        (m) => m.monthNumber == monthNumber
-      );
-
-      if (monthIndex >= 0) {
-        chit.paidMonths[monthIndex].status = status || chit.paidMonths[monthIndex].status;
-      } else {
-        return sendResponse(res, 404, "Failed", {
-          message: "Month not found in paidMonths",
-          statusCode: 404,
-        });
-      }
-
-      await chit.save();
-
-      sendResponse(res, 200, "Success", {
-        message: `Month ${monthNumber} status updated to ${status}`,
-        data: chit,
-        statusCode: 200,
-      });
-    } catch (error) {
-      console.error(error);
-      sendResponse(res, 500, "Failed", {
-        message: error.message || "Internal server error",
-        statusCode: 500,
+    const chit = await SubscriptionChit.findById(chitId);
+    if (!chit) {
+      return sendResponse(res, 404, "Failed", {
+        message: "Subscription chit not found",
+        statusCode: 404,
       });
     }
+
+    const monthIndex = chit.paidMonths.findIndex(
+      (m) => m.monthNumber == monthNumber
+    );
+
+    if (monthIndex >= 0) {
+      chit.paidMonths[monthIndex].status =
+        status || chit.paidMonths[monthIndex].status;
+    } else {
+      return sendResponse(res, 404, "Failed", {
+        message: "Month not found in paidMonths",
+        statusCode: 404,
+      });
+    }
+
+    await chit.save();
+
+    sendResponse(res, 200, "Success", {
+      message: `Month ${monthNumber} status updated to ${status}`,
+      data: chit,
+      statusCode: 200,
+    });
+  } catch (error) {
+    console.error(error);
+    sendResponse(res, 500, "Failed", {
+      message: error.message || "Internal server error",
+      statusCode: 500,
+    });
   }
-);
+});
 
-
-
-
-// Chit-Subscription Sign Up and Login
+// Chit-Subscription Sign Up
 subscriptionChitController.post("/signup", async (req, res) => {
   try {
-    const { userId, name, phone, email, location } = req.body;
+    const { userId, name, phone, email, location, totalAmount } = req.body;
 
-    // Check mandatory fields
     if (!location) {
       return sendResponse(res, 400, "Failed", {
         message: "Location is required",
@@ -322,9 +313,7 @@ subscriptionChitController.post("/signup", async (req, res) => {
     let finalEmail = email;
     let finalPhone = phone;
 
-    // If userId is provided, fetch user details
     if (userId) {
-      const User = require("../model/user.Schema"); // adjust path accordingly
       const userData = await User.findById(userId);
 
       if (userData) {
@@ -350,13 +339,61 @@ subscriptionChitController.post("/signup", async (req, res) => {
       });
     }
 
-    // Create chit subscription with userId reference
+    // Fetch scheme config
+    const config = await SchemeConfig.findOne();
+    if (!config) {
+      return sendResponse(res, 404, "Failed", {
+        message: "Scheme config not found. Contact admin.",
+        statusCode: 404,
+      });
+    }
+
+    const enrolmentDate = new Date();
+    const start = config.schemeStartDate;
+    const end = config.schemeEndDate;
+
+    let calculationStartMonth = enrolmentDate.getMonth(); // default: current month
+
+    if (enrolmentDate.getDate() > 10) {
+      calculationStartMonth += 1; // if enrolled after 10th, start from next month
+    }
+
+    // Adjust year if month exceeds December
+    let calculationStartYear = enrolmentDate.getFullYear();
+    if (calculationStartMonth > 11) {
+      calculationStartMonth = 0;
+      calculationStartYear += 1;
+    }
+
+    // Calculate total months from calculationStartMonth to scheme end
+    const monthsDiff =
+      (end.getFullYear() - calculationStartYear) * 12 +
+      (end.getMonth() - calculationStartMonth) +
+      1;
+
+    if (monthsDiff <= 0) {
+      return sendResponse(res, 400, "Failed", {
+        message:
+          "Scheme end date is before the calculated start month. Please check scheme configuration.",
+        statusCode: 400,
+      });
+    }
+
+    const monthlyAmount = Math.ceil(totalAmount / monthsDiff);
+
+    // Create chit subscription with calculated fields
     const chitCreated = await SubscriptionChit.create({
       userId,
       name: finalName,
       email: finalEmail,
       phone: finalPhone,
       location,
+      totalAmount,
+      monthlyAmount,
+      totalMonths: monthsDiff,
+      schemeStartDate: start,
+      schemeEndDate: end,
+      enrolmentDate: enrolmentDate,
       status: "pending",
     });
 
@@ -365,7 +402,6 @@ subscriptionChitController.post("/signup", async (req, res) => {
       data: chitCreated,
       statusCode: 200,
     });
-
   } catch (error) {
     console.error(error);
     sendResponse(res, 500, "Failed", {
@@ -374,8 +410,6 @@ subscriptionChitController.post("/signup", async (req, res) => {
     });
   }
 });
-
-
 
 subscriptionChitController.put("/approve/:id", async (req, res) => {
   try {
@@ -412,11 +446,18 @@ subscriptionChitController.put("/approve/:id", async (req, res) => {
     const subject = "Your Subscription Chit Account Approved";
     const html = `
       <p>Dear ${chit.name},</p>
-      <p>Your subscription chit account has been approved.</p>
-      <p><strong>Email:</strong> ${chit.email}</p>
-      <p><strong>Password:</strong> ${randomPassword}</p>
-      <p>You can now login using these credentials.</p>
-      <p>Thank you!</p>
+  <p>Your subscription chit account has been approved.</p>
+  <p><strong>Email:</strong> ${chit.email}</p>
+  <p><strong>Password:</strong> ${randomPassword}</p>
+  <hr/>
+  <p><strong>Enrollment Date:</strong> ${chit.enrolmentDate.toDateString()}</p>
+  <p><strong>Monthly Payment Amount:</strong> ₹${chit.monthlyAmount}</p>
+  <p><strong>Scheme Duration:</strong> ${chit.totalMonths} months</p>
+  <p><strong>Scheme Start Date:</strong> ${chit.schemeStartDate.toLocaleString('default', { month: 'long', year: 'numeric' })}</p>
+<p><strong>Scheme End Date:</strong> ${chit.schemeEndDate.toLocaleString('default', { month: 'long', year: 'numeric' })}</p>
+  <hr/>
+  <p>You can now login using these credentials and start your monthly payments.</p>
+  <p>Thank you!</p>
     `;
 
     await sendEmail(chit.email, subject, html);
@@ -434,7 +475,6 @@ subscriptionChitController.put("/approve/:id", async (req, res) => {
     });
   }
 });
-
 
 /**
  * Chit subscription login
@@ -480,54 +520,55 @@ subscriptionChitController.post("/login", async (req, res) => {
   }
 });
 
-
 /**
  * List all registered chit subscription users with optional status filter
  */
-subscriptionChitController.post("/subscription-users/list", async (req, res) => {
-  try {
-    const {
-      userId,
-      searchKey = "",
-      pageNo = 1,
-      pageCount = 10,
-      status
-    } = req.body;
+subscriptionChitController.post(
+  "/subscription-users/list",
+  async (req, res) => {
+    try {
+      const {
+        userId,
+        searchKey = "",
+        pageNo = 1,
+        pageCount = 10,
+        status,
+      } = req.body;
 
-    const query = {};
-    if (userId) query.userId = userId;
-    if (status) query.status = status;
+      const query = {};
+      if (userId) query.userId = userId;
+      if (status) query.status = status;
 
-    if (searchKey) {
-      query.$or = [
-        { name: { $regex: searchKey, $options: "i" } },
-        { location: { $regex: searchKey, $options: "i" } },
-      ];
+      if (searchKey) {
+        query.$or = [
+          { name: { $regex: searchKey, $options: "i" } },
+          { location: { $regex: searchKey, $options: "i" } },
+        ];
+      }
+
+      const totalCount = await SubscriptionChit.countDocuments(query);
+
+      const chitUsers = await SubscriptionChit.find(query)
+        .sort({ createdAt: -1 })
+        .skip((parseInt(pageNo) - 1) * parseInt(pageCount))
+        .limit(parseInt(pageCount))
+        .populate("userId");
+
+      sendResponse(res, 200, "Success", {
+        message: "Subscription chit users list retrieved successfully",
+        data: chitUsers,
+        totalCount,
+        statusCode: 200,
+      });
+    } catch (error) {
+      console.error(error);
+      sendResponse(res, 500, "Failed", {
+        message: error.message || "Internal server error",
+        statusCode: 500,
+      });
     }
-
-    const totalCount = await SubscriptionChit.countDocuments(query);
-
-    const chitUsers = await SubscriptionChit.find(query)
-      .sort({ createdAt: -1 })
-      .skip((parseInt(pageNo) - 1) * parseInt(pageCount))
-      .limit(parseInt(pageCount))
-      .populate("userId");
-
-    sendResponse(res, 200, "Success", {
-      message: "Subscription chit users list retrieved successfully",
-      data: chitUsers,
-      totalCount,
-      statusCode: 200,
-    });
-  } catch (error) {
-    console.error(error);
-    sendResponse(res, 500, "Failed", {
-      message: error.message || "Internal server error",
-      statusCode: 500,
-    });
   }
-});
-
+);
 
 /**
  * List subscriptions purchased by a chit user
@@ -543,7 +584,9 @@ subscriptionChitController.post("/my-subscriptions", async (req, res) => {
       });
     }
 
-    const subscriptions = await SubscriptionChit.find({ _id: userId }).populate("userId");
+    const subscriptions = await SubscriptionChit.find({ _id: userId }).populate(
+      "userId"
+    );
 
     sendResponse(res, 200, "Success", {
       message: "Subscriptions retrieved successfully",
@@ -558,6 +601,5 @@ subscriptionChitController.post("/my-subscriptions", async (req, res) => {
     });
   }
 });
-
 
 module.exports = subscriptionChitController;

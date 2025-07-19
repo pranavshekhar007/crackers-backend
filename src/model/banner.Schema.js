@@ -7,21 +7,21 @@ const bannerSchema = mongoose.Schema({
     type: String,
     required: true,
   },
-  category:{
+  category: {
     type: String,
     // required: true,
   },
-  status:{
+  type: { 
+    type: String, 
+    required: true 
+  },
+  status: {
     type: Boolean,
     default: true,
   },
-  name:{
+  link: {
     type: String,
-    require: true,
   },
-  link:{
-    type: String,
-  }
 });
 
 bannerSchema.plugin(timestamps);

@@ -19,7 +19,7 @@ bannerController.post("/create", upload.single("image"), async (req, res) => {
           return result;
         }
       });
-      obj = { ...req.body, image: image.url };
+      obj = { ...req.body, image: image.url, type: req.body.type, };
     }
     const BannerCreated = await Banner.create(obj);
     sendResponse(res, 200, "Success", {
