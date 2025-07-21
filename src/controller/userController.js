@@ -418,7 +418,7 @@ userController.post("/add-to-cart/:id", async (req, res) => {
     }
 
     const updatedUser = await User.findByIdAndUpdate(currentUserId, updateQuery, { new: true });
-    sendResponse(res, 200, "Success", { message, data: updatedUser.cartItems });
+    sendResponse(res, 200, "Success", { message, data: updatedUser.cartItems, statusCode: 200 });
 
   } catch (error) {
     console.log(error);
@@ -473,7 +473,7 @@ userController.post("/remove-from-cart/:id", async (req, res) => {
       await User.findByIdAndUpdate(currentUserId, updateQuery, { new: true });
     }
 
-    sendResponse(res, 200, "Success", { message });
+    sendResponse(res, 200, "Success", { message, statusCode: 200 });
   } catch (error) {
     console.log(error);
     sendResponse(res, 500, "Failed", { message: error.message || "Internal server error" });
@@ -530,6 +530,7 @@ userController.get("/cart/:userId", async (req, res) => {
       cartItems: cartDetails.filter(Boolean),
       actualTotalAmount,
       discountedTotalAmount,
+      statusCode: 200
     });
   } catch (error) {
     console.error(error);
