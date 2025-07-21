@@ -42,7 +42,7 @@ categoryController.post("/list", async (req, res) => {
       searchKey = "",
       status,
       pageNo = 1,
-      pageCount = 10,
+      pageCount = 30,
       sortByField,
       sortByOrder
     } = req.body;

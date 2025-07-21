@@ -1,6 +1,7 @@
 const express = require("express");
 const { sendResponse, generateOTP } = require("../utils/common");
 require("dotenv").config();
+const mongoose = require("mongoose");
 const Product = require("../model/product.Schema");
 const ComboProduct = require("../model/comboProduct.Schema");
 const Category = require("../model/category.Schema");
@@ -349,101 +350,27 @@ userController.post("/list", async (req, res) => {
   }
 });
 
+// Helper function to fetch item by type
+async function getItemByIdAndType(itemId, itemType) {
+  if (!mongoose.Types.ObjectId.isValid(itemId)) return null;
+  if (itemType === "Product") return Product.findById(itemId);
+  if (itemType === "ComboProduct") return ComboProduct.findById(itemId);
+  return null;
+}
+
+// Add to Cart
 userController.post("/add-to-cart/:id", async (req, res) => {
   try {
-    const { id: productId } = req.params;
-    const { userId: currentUserId } = req.body;
+    const { id: itemId } = req.params;
+    const { userId: currentUserId, itemType } = req.body; // Ensure itemType is sent from frontend
 
-    if (!productId || !currentUserId) {
-      return sendResponse(res, 422, "Failed", {
-        message: "Missing productId or userId!",
-      });
+    if (!itemId || !currentUserId || !itemType) {
+      return sendResponse(res, 422, "Failed", { message: "Missing itemId, userId, or itemType!" });
     }
 
-    const product = await Product.findById(productId);
-    if (!product) {
-      return sendResponse(res, 400, "Failed", {
-        message: "Product not found!",
-      });
-    }
-
-    const user = await User.findById(currentUserId);
-    if (!user) {
-      return sendResponse(res, 400, "Failed", {
-        message: "User not found!",
-      });
-    }
-
-    // Ensure cartItems is an array
-    if (!Array.isArray(user.cartItems)) {
-      user.cartItems = [];
-    }
-
-    // Check if product already exists in cart
-    const cartItemIndex = user.cartItems.findIndex(
-      (item) => item.productId.toString() === productId
-    );
-
-    let updateQuery;
-    let message;
-
-    if (cartItemIndex !== -1) {
-      const currentQuantity = user.cartItems[cartItemIndex].quantity;
-
-      // Check if adding one more exceeds stock
-      if (currentQuantity + 1 > product.stockQuantity) {
-        return sendResponse(res, 400, "Failed", {
-          message: `Only ${
-            product.stockQuantity - currentQuantity
-          } item(s) left in stock for this product.`,
-        });
-      }
-
-      // If stock is available, increment quantity
-      updateQuery = {
-        $set: {
-          [`cartItems.${cartItemIndex}.quantity`]: currentQuantity + 1,
-        },
-      };
-      message = "Item quantity incremented successfully";
-    } else {
-      // If new product being added, make sure there's at least 1 in stock
-      if (product.stockQuantity < 1) {
-        return sendResponse(res, 400, "Failed", {
-          message: "This product is currently out of stock.",
-        });
-      }
-
-      updateQuery = {
-        $push: { cartItems: { productId, quantity: 1 } },
-      };
-      message = "Item added successfully to cart";
-    }
-
-    const updatedUser = await User.findByIdAndUpdate(
-      currentUserId,
-      updateQuery,
-      { new: true }
-    );
-
-    sendResponse(res, 200, "Success", { message, data: updatedUser.cartItems });
-  } catch (error) {
-    console.log(error);
-    sendResponse(res, 500, "Failed", {
-      message: error.message || "Internal server error",
-    });
-  }
-});
-
-userController.post("/remove-from-cart/:id", async (req, res) => {
-  try {
-    const { id: productId } = req.params;
-    const { userId: currentUserId } = req.body;
-
-    if (!productId || !currentUserId) {
-      return sendResponse(res, 422, "Failed", {
-        message: "Missing productId or userId!",
-      });
+    const item = await getItemByIdAndType(itemId, itemType);
+    if (!item) {
+      return sendResponse(res, 400, "Failed", { message: `${itemType} not found!` });
     }
 
     const user = await User.findById(currentUserId);
@@ -451,9 +378,74 @@ userController.post("/remove-from-cart/:id", async (req, res) => {
       return sendResponse(res, 400, "Failed", { message: "User not found!" });
     }
 
-    // Check if product exists in cart
+    if (!Array.isArray(user.cartItems)) user.cartItems = [];
+
+    const cartItemIndex = user.cartItems.findIndex(
+      (i) =>
+        i.itemId &&
+        i.itemId.toString() === itemId &&
+        i.itemType === itemType
+    );
+    
+
+    let updateQuery, message;
+
+    if (cartItemIndex !== -1) {
+      const currentQuantity = user.cartItems[cartItemIndex].quantity;
+      if (currentQuantity + 1 > item.stockQuantity) {
+        return sendResponse(res, 400, "Failed", {
+          message: `Only ${item.stockQuantity - currentQuantity} item(s) left in stock for this ${itemType}.`,
+        });
+      }
+
+      updateQuery = {
+        $set: {
+          [`cartItems.${cartItemIndex}.quantity`]: currentQuantity + 1,
+        },
+      };
+      message = "Item quantity incremented successfully";
+    } else {
+      if (item.stockQuantity < 1) {
+        return sendResponse(res, 400, "Failed", {
+          message: `This ${itemType} is currently out of stock.`,
+        });
+      }
+
+      updateQuery = {
+        $push: { cartItems: { itemId, itemType, quantity: 1 } },
+      };
+      message = `${itemType} added successfully to cart`;
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(currentUserId, updateQuery, { new: true });
+    sendResponse(res, 200, "Success", { message, data: updatedUser.cartItems });
+
+  } catch (error) {
+    console.log(error);
+    sendResponse(res, 500, "Failed", { message: error.message || "Internal server error" });
+  }
+});
+
+// Remove from Cart
+userController.post("/remove-from-cart/:id", async (req, res) => {
+  try {
+    const { id: itemId } = req.params;
+    const { userId: currentUserId, itemType } = req.body;
+
+    if (!itemId || !currentUserId || !itemType) {
+      return sendResponse(res, 422, "Failed", { message: "Missing itemId, userId, or itemType!" });
+    }
+
+    const user = await User.findById(currentUserId);
+    if (!user) {
+      return sendResponse(res, 400, "Failed", { message: "User not found!" });
+    }
+
     const cartItem = user.cartItems.find(
-      (item) => item.productId.toString() === productId
+      (i) =>
+        i.itemId &&
+        i.itemId.toString() === itemId &&
+        i.itemType === itemType
     );
 
     if (!cartItem) {
@@ -463,73 +455,56 @@ userController.post("/remove-from-cart/:id", async (req, res) => {
     let updateQuery, message;
 
     if (cartItem.quantity > 1) {
-      // Reduce quantity if more than 1
       updateQuery = {
-        $set: {
-          "cartItems.$[elem].quantity": cartItem.quantity - 1,
-        },
+        $set: { "cartItems.$[elem].quantity": cartItem.quantity - 1 },
       };
       message = "Item quantity decreased";
 
-      // Update user document with array filter
       await User.findByIdAndUpdate(currentUserId, updateQuery, {
         new: true,
-        arrayFilters: [{ "elem.productId": productId }],
+        arrayFilters: [{ "elem.itemId": itemId, "elem.itemType": itemType }],
       });
     } else {
-      // Remove item from cart if quantity is 1
       updateQuery = {
-        $pull: { cartItems: { productId } },
+        $pull: { cartItems: { itemId, itemType } },
       };
       message = "Item removed from cart";
 
-      // Update user document without array filter
       await User.findByIdAndUpdate(currentUserId, updateQuery, { new: true });
     }
 
     sendResponse(res, 200, "Success", { message });
   } catch (error) {
     console.log(error);
-    sendResponse(res, 500, "Failed", {
-      message: error.message || "Internal server error",
-    });
+    sendResponse(res, 500, "Failed", { message: error.message || "Internal server error" });
   }
 });
 
+// Get Cart Items
 userController.get("/cart/:userId", async (req, res) => {
   try {
     const { userId } = req.params;
 
     if (!userId) {
-      return sendResponse(res, 422, "Failed", {
-        message: "User ID is required!",
-      });
+      return sendResponse(res, 422, "Failed", { message: "User ID is required!" });
     }
 
-    const user = await User.findById(userId).populate({
-      path: "cartItems.productId",
-    });
-
+    const user = await User.findById(userId);
     if (!user) {
-      return sendResponse(res, 400, "Failed", {
-        message: "User not found!",
-      });
+      return sendResponse(res, 400, "Failed", { message: "User not found!" });
     }
 
     let actualTotalAmount = 0;
     let discountedTotalAmount = 0;
 
-    const cartDetails = user.cartItems
-      .map((item) => {
-        const product = item.productId;
-
-        if (!product) {
-          return null; // skip this cart item if product is not found
-        }
+    const cartDetails = await Promise.all(
+      user.cartItems.map(async (item) => {
+        const product = await getItemByIdAndType(item.itemId, item.itemType);
+        if (!product) return null;
 
         const quantity = item.quantity || 1;
-        const price = product.price;
-        const discounted_price = product.discountedPrice;
+        const price = product.price || 0;
+        const discounted_price = product.discountedPrice || price;
 
         const actualPrice = price * quantity;
         const discountedPrice = discounted_price * quantity;
@@ -539,36 +514,26 @@ userController.get("/cart/:userId", async (req, res) => {
         return {
           _id: product._id,
           name: product.name,
-          productHeroImage: product.productHeroImage,
-          productGallery: product.productGallery,
-          shortDescription: product.shortDescription,
-          categoryId: product.categoryId,
-          subCategoryId: product.subCategoryId,
-          price: product.price || 0,
-          discountedPrice: product.discountedPrice || 0,
-          description: product.description,
-          codAvailable: product.codAvailable,
-          isActive: product.isActive,
-          updatedAt: product.updatedAt,
-          createdAt: product.createdAt,
+          itemType: item.itemType,
+          productHeroImage: product.productHeroImage || null,
+          price,
+          discountedPrice: discounted_price,
           quantity,
           totalItemPrice: actualPrice,
           totalItemDiscountedPrice: discountedPrice,
         };
       })
-      .filter(Boolean); // remove null values if any product was missing
+    );
 
     sendResponse(res, 200, "Success", {
       message: "Cart items retrieved successfully",
-      cartItems: cartDetails,
+      cartItems: cartDetails.filter(Boolean),
       actualTotalAmount,
       discountedTotalAmount,
     });
   } catch (error) {
     console.error(error);
-    sendResponse(res, 500, "Failed", {
-      message: error.message || "Internal server error",
-    });
+    sendResponse(res, 500, "Failed", { message: error.message || "Internal server error" });
   }
 });
 
