@@ -362,7 +362,7 @@ async function getItemByIdAndType(itemId, itemType) {
 userController.post("/add-to-cart/:id", async (req, res) => {
   try {
     const { id: itemId } = req.params;
-    const { userId: currentUserId, itemType } = req.body; // Ensure itemType is sent from frontend
+    const { userId: currentUserId, itemType } = req.body;
 
     if (!itemId || !currentUserId || !itemType) {
       return sendResponse(res, 422, "Failed", {
@@ -493,6 +493,55 @@ userController.post("/remove-from-cart/:id", async (req, res) => {
     });
   }
 });
+
+// Remove from Cart (Remove entire item directly)
+userController.post("/remove-item-from-cart/:id", async (req, res) => {
+  try {
+    const { id: itemId } = req.params;
+    const { userId: currentUserId, itemType } = req.body;
+
+    if (!itemId || !currentUserId || !itemType) {
+      return sendResponse(res, 422, "Failed", {
+        message: "Missing itemId, userId, or itemType!",
+      });
+    }
+
+    const user = await User.findById(currentUserId);
+    if (!user) {
+      return sendResponse(res, 400, "Failed", { message: "User not found!" });
+    }
+
+    const cartItem = user.cartItems.find(
+      (i) =>
+        i.itemId && i.itemId.toString() === itemId && i.itemType === itemType
+    );
+
+    if (!cartItem) {
+      return sendResponse(res, 400, "Failed", { message: "Item not in cart!" });
+    }
+
+    // Directly remove the entire item from cart
+    const updatedUser = await User.findByIdAndUpdate(
+      currentUserId,
+      {
+        $pull: { cartItems: { itemId, itemType } },
+      },
+      { new: true }
+    );
+
+    sendResponse(res, 200, "Success", {
+      message: "Item removed completely from cart",
+      data: updatedUser.cartItems,
+      statusCode: 200,
+    });
+  } catch (error) {
+    console.log(error);
+    sendResponse(res, 500, "Failed", {
+      message: error.message || "Internal server error",
+    });
+  }
+});
+
 
 // Get Cart Items
 userController.get("/cart/:userId", async (req, res) => {
