@@ -365,12 +365,16 @@ userController.post("/add-to-cart/:id", async (req, res) => {
     const { userId: currentUserId, itemType } = req.body; // Ensure itemType is sent from frontend
 
     if (!itemId || !currentUserId || !itemType) {
-      return sendResponse(res, 422, "Failed", { message: "Missing itemId, userId, or itemType!" });
+      return sendResponse(res, 422, "Failed", {
+        message: "Missing itemId, userId, or itemType!",
+      });
     }
 
     const item = await getItemByIdAndType(itemId, itemType);
     if (!item) {
-      return sendResponse(res, 400, "Failed", { message: `${itemType} not found!` });
+      return sendResponse(res, 400, "Failed", {
+        message: `${itemType} not found!`,
+      });
     }
 
     const user = await User.findById(currentUserId);
@@ -382,11 +386,8 @@ userController.post("/add-to-cart/:id", async (req, res) => {
 
     const cartItemIndex = user.cartItems.findIndex(
       (i) =>
-        i.itemId &&
-        i.itemId.toString() === itemId &&
-        i.itemType === itemType
+        i.itemId && i.itemId.toString() === itemId && i.itemType === itemType
     );
-    
 
     let updateQuery, message;
 
@@ -394,7 +395,9 @@ userController.post("/add-to-cart/:id", async (req, res) => {
       const currentQuantity = user.cartItems[cartItemIndex].quantity;
       if (currentQuantity + 1 > item.stockQuantity) {
         return sendResponse(res, 400, "Failed", {
-          message: `Only ${item.stockQuantity - currentQuantity} item(s) left in stock for this ${itemType}.`,
+          message: `Only ${
+            item.stockQuantity - currentQuantity
+          } item(s) left in stock for this ${itemType}.`,
         });
       }
 
@@ -417,12 +420,21 @@ userController.post("/add-to-cart/:id", async (req, res) => {
       message = `${itemType} added successfully to cart`;
     }
 
-    const updatedUser = await User.findByIdAndUpdate(currentUserId, updateQuery, { new: true });
-    sendResponse(res, 200, "Success", { message, data: updatedUser.cartItems, statusCode: 200 });
-
+    const updatedUser = await User.findByIdAndUpdate(
+      currentUserId,
+      updateQuery,
+      { new: true }
+    );
+    sendResponse(res, 200, "Success", {
+      message,
+      data: updatedUser.cartItems,
+      statusCode: 200,
+    });
   } catch (error) {
     console.log(error);
-    sendResponse(res, 500, "Failed", { message: error.message || "Internal server error" });
+    sendResponse(res, 500, "Failed", {
+      message: error.message || "Internal server error",
+    });
   }
 });
 
@@ -433,7 +445,9 @@ userController.post("/remove-from-cart/:id", async (req, res) => {
     const { userId: currentUserId, itemType } = req.body;
 
     if (!itemId || !currentUserId || !itemType) {
-      return sendResponse(res, 422, "Failed", { message: "Missing itemId, userId, or itemType!" });
+      return sendResponse(res, 422, "Failed", {
+        message: "Missing itemId, userId, or itemType!",
+      });
     }
 
     const user = await User.findById(currentUserId);
@@ -443,9 +457,7 @@ userController.post("/remove-from-cart/:id", async (req, res) => {
 
     const cartItem = user.cartItems.find(
       (i) =>
-        i.itemId &&
-        i.itemId.toString() === itemId &&
-        i.itemType === itemType
+        i.itemId && i.itemId.toString() === itemId && i.itemType === itemType
     );
 
     if (!cartItem) {
@@ -476,7 +488,9 @@ userController.post("/remove-from-cart/:id", async (req, res) => {
     sendResponse(res, 200, "Success", { message, statusCode: 200 });
   } catch (error) {
     console.log(error);
-    sendResponse(res, 500, "Failed", { message: error.message || "Internal server error" });
+    sendResponse(res, 500, "Failed", {
+      message: error.message || "Internal server error",
+    });
   }
 });
 
@@ -486,7 +500,9 @@ userController.get("/cart/:userId", async (req, res) => {
     const { userId } = req.params;
 
     if (!userId) {
-      return sendResponse(res, 422, "Failed", { message: "User ID is required!" });
+      return sendResponse(res, 422, "Failed", {
+        message: "User ID is required!",
+      });
     }
 
     const user = await User.findById(userId);
@@ -503,11 +519,20 @@ userController.get("/cart/:userId", async (req, res) => {
         if (!product) return null;
 
         const quantity = item.quantity || 1;
-        const price = product.price || 0;
-        const discounted_price = product.discountedPrice || price;
+        let price = 0;
+        let discounted_price = 0;
+
+        if (item.itemType === "Product") {
+          price = product.price || 0;
+          discounted_price = product.discountedPrice || price;
+        } else if (item.itemType === "ComboProduct") {
+          price = product.pricing?.actualPrice || 0;
+          discounted_price = product.pricing?.comboPrice || price;
+        }
 
         const actualPrice = price * quantity;
         const discountedPrice = discounted_price * quantity;
+
         actualTotalAmount += actualPrice;
         discountedTotalAmount += discountedPrice;
 
@@ -530,11 +555,13 @@ userController.get("/cart/:userId", async (req, res) => {
       cartItems: cartDetails.filter(Boolean),
       actualTotalAmount,
       discountedTotalAmount,
-      statusCode: 200
+      statusCode: 200,
     });
   } catch (error) {
     console.error(error);
-    sendResponse(res, 500, "Failed", { message: error.message || "Internal server error" });
+    sendResponse(res, 500, "Failed", {
+      message: error.message || "Internal server error",
+    });
   }
 });
 
