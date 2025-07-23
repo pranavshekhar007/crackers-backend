@@ -6,7 +6,11 @@ const path = require("path");
 const mongoose = require("mongoose");
 const { sendResponse } = require("../utils/common");
 const upload = require("../utils/multer");
+const cloudinary = require("../utils/cloudinary")
+
 const Product = require("../model/product.Schema");
+const Category = require("../model/category.Schema");
+const Brand = require("../model/brand.Schema");
 
 const excelController = express.Router();
 
@@ -20,55 +24,80 @@ const toObjectId = (id) => {
 };
 
 // Normalize each row before insert
-const normalizeProductData = (item) => {
-  if (item.categoryId && typeof item.categoryId === "string") {
-    item.categoryId = item.categoryId
-      .split(",")
-      .map(id => toObjectId(id))
-      .filter(Boolean);
+const normalizeProductData = async (item) => {
+  // CATEGORY: Convert category name to ID
+  if (item.category && typeof item.category === "string") {
+    const categoryNames = item.category.split(",").map(name => name.trim());
+    const categoryDocs = await Category.find({ name: { $in: categoryNames } });
+    item.categoryId = categoryDocs.map(cat => cat._id);
   }
 
-  if (item.venderId && typeof item.venderId === "string") {
-    item.venderId = item.venderId
-      .split(",")
-      .map(id => toObjectId(id))
-      .filter(Boolean);
+  // BRAND: Convert brand name to ID
+  if (item.brand && typeof item.brand === "string") {
+    const brandDoc = await Brand.findOne({ name: item.brand.trim() });
+    item.brandId = brandDoc ? brandDoc._id : null;
   }
 
-  if (item.brandId && typeof item.brandId === "string") {
-    item.brandId = toObjectId(item.brandId);
+  // PRODUCT HERO IMAGE: Upload from local path if provided
+  if (item.productHeroImage && typeof item.productHeroImage === "string") {
+    try {
+      const uploadRes = await cloudinary.uploader.upload(item.productHeroImage, {
+        folder: "products",
+      });
+      item.productHeroImage = uploadRes.secure_url;
+    } catch (err) {
+      console.error("Hero Image Upload Error:", err);
+      item.productHeroImage = "";
+    }
+  } else {
+    item.productHeroImage = "";
   }
 
+  // PRODUCT GALLERY: Upload each local path
   if (item.productGallery && typeof item.productGallery === "string") {
-    try {
-      item.productGallery = JSON.parse(item.productGallery);
-    } catch {
-      item.productGallery = item.productGallery
-        .split(",")
-        .map(img => img.trim());
+    const galleryPaths = item.productGallery.split(",").map(url => url.trim());
+    const uploadedGallery = [];
+
+    for (const imgPath of galleryPaths) {
+      try {
+        const uploadRes = await cloudinary.uploader.upload(imgPath, {
+          folder: "products/gallery",
+        });
+        uploadedGallery.push(uploadRes.secure_url);
+      } catch (err) {
+        console.error("Gallery Image Upload Error:", err);
+      }
     }
+
+    item.productGallery = uploadedGallery;
+  } else {
+    item.productGallery = [];
   }
 
-  if (item.productOtherDetails && typeof item.productOtherDetails === "string") {
-    try {
-      item.productOtherDetails = JSON.parse(item.productOtherDetails);
-    } catch {
-      item.productOtherDetails = [];
-    }
+  // TAGS: Parse comma separated tags
+  if (item.tags && typeof item.tags === "string") {
+    item.tags = item.tags.split(",").map(tag => tag.trim());
+  } else {
+    item.tags = [];
   }
 
-  if (item.productVariants && typeof item.productVariants === "string") {
-    try {
-      item.productVariants = JSON.parse(item.productVariants);
-    } catch {
-      item.productVariants = [];
-    }
+  // SPECIAL APPEARANCE: Parse comma separated values
+  if (item.specialAppearance && typeof item.specialAppearance === "string") {
+    item.specialAppearance = item.specialAppearance.split(",").map(s => s.trim());
+  } else {
+    item.specialAppearance = [];
   }
+
+  // Clean up unnecessary fields
+  delete item.venderId;
+  delete item.productOtherDetails;
+  delete item.productVariants;
+  delete item.category; // remove the category name field used for mapping
+  delete item.brand;    // remove the brand name field used for mapping
 
   return item;
 };
 
-// BULK UPLOAD
 excelController.post("/upload", upload.single("file"), async (req, res) => {
   try {
     if (!req.file) {
@@ -92,10 +121,25 @@ excelController.post("/upload", upload.single("file"), async (req, res) => {
       });
     }
 
-    const processedData = jsonData
-      .filter(item => item.name && item.price)
-      .map(normalizeProductData);
+    const processedData = await Promise.all(
+      jsonData
+        .filter(item => item.name && item.price)
+        .map(async (item) => {
+          // Check duplicate
+          const existingProduct = await Product.findOne({ name: item.name.trim() });
+          if (existingProduct) {
+            const error = new Error(`Duplicate product name "${item.name}" found. Upload aborted.`);
+            error.statusCode = 409; // Conflict
+            throw error;
+          }
+    
+          return normalizeProductData(item);
+        })
+    );
+    
+    
 
+    // Insert into Product collection
     const insertedProducts = await Product.insertMany(processedData);
 
     return sendResponse(res, 200, "Success", {
@@ -106,6 +150,80 @@ excelController.post("/upload", upload.single("file"), async (req, res) => {
 
   } catch (error) {
     console.error("Excel Upload Error:", error);
+    const statusCode = error.statusCode || 500;
+    return sendResponse(res, statusCode, "Failed", {
+      message: error.message || "Internal Server Error",
+      statusCode,
+    });
+  }
+  
+});
+
+
+excelController.post("/export", async (req, res) => {
+  try {
+    const { format = "excel" } = req.body;
+
+    // Fetch all products with populated category and brand names if needed
+    const products = await Product.find()
+      .populate("categoryId", "name")
+      .populate("brandId", "name")
+      .lean();
+
+      const processedProducts = products.map((p) => ({
+        ...p,
+        category: p.categoryId?.map(c => c.name).join(", ") || "",
+        brand: p.brandId?.name || "",
+        tags: Array.isArray(p.tags) ? p.tags.join(", ") : "",
+        specialAppearance: Array.isArray(p.specialAppearance) ? p.specialAppearance.join(", ") : "",
+      }));
+      
+
+    let fileBuffer;
+    let contentType;
+    let fileExtension;
+
+    if (format === "excel") {
+      // Convert to Excel file
+      const workbook = xlsx.utils.book_new();
+      const worksheet = xlsx.utils.json_to_sheet(processedProducts);
+      xlsx.utils.book_append_sheet(workbook, worksheet, "Products");
+
+      fileBuffer = xlsx.write(workbook, { type: "buffer", bookType: "xlsx" });
+      contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+      fileExtension = "xlsx";
+
+    } else if (format === "csv") {
+      // Convert to CSV
+      const worksheet = xlsx.utils.json_to_sheet(processedProducts);
+      fileBuffer = Buffer.from(xlsx.utils.sheet_to_csv(worksheet), "utf-8");
+      contentType = "text/csv";
+      fileExtension = "csv";
+
+    } else if (format === "txt") {
+      // Convert to TXT (tab separated)
+      const worksheet = xlsx.utils.json_to_sheet(processedProducts);
+      const txtData = xlsx.utils.sheet_to_txt(worksheet, { FS: "\t" });
+      fileBuffer = Buffer.from(txtData, "utf-8");
+      contentType = "text/plain";
+      fileExtension = "txt";
+
+    } else {
+      return sendResponse(res, 400, "Failed", {
+        message: "Invalid export format",
+        statusCode: 400,
+      });
+    }
+
+    // Set headers for download
+    res.setHeader("Content-Type", contentType);
+    res.setHeader("Content-Disposition", `attachment; filename=productList.${fileExtension}`);
+
+    // Send the file buffer
+    res.send(fileBuffer);
+
+  } catch (error) {
+    console.error("Export Error:", error);
     return sendResponse(res, 500, "Failed", {
       message: error.message || "Internal Server Error",
       statusCode: 500,
@@ -113,85 +231,5 @@ excelController.post("/upload", upload.single("file"), async (req, res) => {
   }
 });
 
-// EXPORT PRODUCTS
-excelController.post("/export", async (req, res) => {
-  try {
-    const {
-      searchKey = "",
-      status,
-      categoryId,
-      sortByField,
-      sortByOrder,
-      format = "excel",
-    } = req.body;
-
-    const query = {};
-    if (status) query.status = status;
-    if (searchKey) query.name = { $regex: searchKey, $options: "i" };
-    if (categoryId) query.categoryId = categoryId;
-
-    const sortField = sortByField || "createdAt";
-    const sortOrder = sortByOrder === "asc" ? 1 : -1;
-    const sortOption = { [sortField]: sortOrder };
-
-    const productList = await Product.find(query)
-      .populate("venderId")
-      .populate("categoryId")
-      .sort(sortOption);
-
-    const formattedData = productList.map((product) => ({
-      Name: product.name,
-      Tags: product.tags?.join(", "),
-      Type: product.productType,
-      Tax: product.tax,
-      Category: product.categoryId?.map((cat) => cat.name).join(", "),
-      Vender: product.venderId?.map((v) => v.name).join(", "),
-      HSN: product.hsnCode,
-      GTIN: product.GTIN,
-      Price: product.price,
-      DiscountedPrice: product.discountedPrice,
-      Stock: product.stockQuantity,
-      Pieces: product.numberOfPieces,
-      Status: product.status ? "Active" : "Inactive",
-      CreatedAt: product.createdAt,
-    }));
-
-    const exportDir = path.join(__dirname, "../exports");
-    if (!fs.existsSync(exportDir)) fs.mkdirSync(exportDir);
-
-    const fileName = `productList.${
-      format === "txt" ? "txt" : format === "csv" ? "csv" : "xlsx"
-    }`;
-    const filePath = path.join(exportDir, fileName);
-
-    if (format === "csv") {
-      const worksheet = xlsx.utils.json_to_sheet(formattedData);
-      const csvData = xlsx.utils.sheet_to_csv(worksheet);
-      fs.writeFileSync(filePath, csvData);
-    } else if (format === "txt") {
-      const txtData = formattedData
-        .map((item) => Object.values(item).join(" | "))
-        .join("\n");
-      fs.writeFileSync(filePath, txtData);
-    } else {
-      const worksheet = xlsx.utils.json_to_sheet(formattedData);
-      const workbook = xlsx.utils.book_new();
-      xlsx.utils.book_append_sheet(workbook, worksheet, "Products");
-      xlsx.writeFile(workbook, filePath);
-    }
-
-    res.download(filePath, fileName, (err) => {
-      if (err) console.error("Download error:", err);
-      fs.unlink(filePath, (unlinkErr) => {
-        if (unlinkErr) console.error("File delete error:", unlinkErr);
-      });
-    });
-  } catch (error) {
-    console.error(error);
-    sendResponse(res, 500, "Failed", {
-      message: error.message || "Internal Server Error",
-    });
-  }
-});
 
 module.exports = excelController;

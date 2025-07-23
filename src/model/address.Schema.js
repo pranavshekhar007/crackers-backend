@@ -20,7 +20,6 @@ const addressSchema = mongoose.Schema({
   },
   landmark: {
     type: String,
-    required: true,
   },
   area: {
     type: String,
