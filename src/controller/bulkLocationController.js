@@ -8,8 +8,6 @@ require("dotenv").config();
 
 const State = require("../model/state.schema");
 const City = require("../model/city.Schema");
-const Area = require("../model/area.Schema");
-const Pincode = require("../model/pincode.Schema");
 
 const bulkLocationController = express.Router();
 const upload = multer({ dest: "/tmp" });
@@ -19,8 +17,6 @@ const getModelByType = (type) => {
   switch (type.toLowerCase()) {
     case "states": return State;
     case "cities": return City;
-    case "areas": return Area;
-    case "pincodes": return Pincode;
     default: return null;
   }
 };
@@ -33,27 +29,11 @@ const getStartingIdField = async (Model, field) => {
 
 // Helper: Convert reference names to IDs for upload with sequential IDs
 const resolveReferences = async (item, locationType, idCounters) => {
-  if (locationType === "Areas") {
-    const state = await State.findOne({ name: item.state });
-    const city = await City.findOne({ name: item.city });
-    const pincode = await Pincode.findOne({ pincode: item.pincode });
-
-    item.stateId = state ? state.stateId : null;
-    item.cityId = city ? city.cityId : null;
-    item.pincodeId = pincode ? pincode.pincodeId : null;
-
-    delete item.state;
-    delete item.city;
-    delete item.pincode;
-
-    if (!item.areaId) {
-      item.areaId = idCounters.areaId++;
-    }
-
-  } else if (locationType === "Cities") {
-    const state = await State.findOne({ name: item.state });
-    item.stateId = state ? state.stateId : null;
-    delete item.state;
+  if (locationType === "Cities") {
+    const state = await State.findOne({ stateId: item.stateId });
+    if (!state) {
+      throw new Error(`Invalid stateId: ${item.stateId} for city ${item.name}`);
+    }    
 
     if (!item.cityId) {
       item.cityId = idCounters.cityId++;
@@ -63,15 +43,10 @@ const resolveReferences = async (item, locationType, idCounters) => {
     if (!item.stateId) {
       item.stateId = idCounters.stateId++;
     }
-
-  } else if (locationType === "Pincodes") {
-    if (!item.pincodeId) {
-      item.pincodeId = idCounters.pincodeId++;
-    }
   }
 };
 
-
+// Bulk Upload Endpoint
 bulkLocationController.post("/bulk-upload", upload.single("file"), async (req, res) => {
   try {
     const { type, locationType } = req.body;
@@ -103,10 +78,6 @@ bulkLocationController.post("/bulk-upload", upload.single("file"), async (req, r
       idCounters.stateId = await getStartingIdField(State, "stateId");
     } else if (locationType === "Cities") {
       idCounters.cityId = await getStartingIdField(City, "cityId");
-    } else if (locationType === "Areas") {
-      idCounters.areaId = await getStartingIdField(Area, "areaId");
-    } else if (locationType === "Pincodes") {
-      idCounters.pincodeId = await getStartingIdField(Pincode, "pincodeId");
     }
 
     for (const item of json) {
@@ -134,7 +105,6 @@ bulkLocationController.post("/bulk-upload", upload.single("file"), async (req, r
   }
 });
 
-
 // Bulk Download Endpoint
 bulkLocationController.post("/bulk-download", async (req, res) => {
   try {
@@ -150,10 +120,7 @@ bulkLocationController.post("/bulk-download", async (req, res) => {
 
     const data = await Model.find({});
 
-    const formatted = data.map((item) => {
-      const obj = item.toObject();
-      return obj; // Now contains stateId, cityId, pincodeId, areaId fields
-    });
+    const formatted = data.map((item) => item.toObject());
 
     const exportDir = "/tmp";
     if (!fs.existsSync(exportDir)) fs.mkdirSync(exportDir);
