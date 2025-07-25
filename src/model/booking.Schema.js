@@ -50,7 +50,6 @@ const bookingSchema = mongoose.Schema({
       quantity: { type: Number },
       totalPrice: { type: Number },
       productHeroImage: { type: String },
-      productName: { type: String }, 
     },
   ],
 

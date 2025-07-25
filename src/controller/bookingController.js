@@ -13,12 +13,22 @@ const sendEmail = require("../utils/sendEmail");
 const Address = require("../model/address.Schema");
 const Area = require("../model/area.Schema");
 const Coupon = require("../model/coupon.Schema");
+const User = require("../model/user.Schema");
 
 bookingController.post("/create", async (req, res) => {
   try {
     const bookingData = {
       ...req.body,
     };
+
+    let product = req.body.product.filter((v, i) => v.productType == "Product");
+    let comboProduct = req.body.product
+      .filter((v) => v?.productType === "ComboProduct")
+      .map((v) => ({
+        comboProductId: v.productId,
+        quantity: v.quantity,
+        totalPrice: v.totalPrice,
+      }));
 
     let couponId = req.body.couponId;
 
@@ -60,11 +70,25 @@ bookingController.post("/create", async (req, res) => {
       );
     }
 
-    const bookingCreated = await Booking.create(bookingData);
+    const bookingCreated = await Booking.create({
+      ...bookingData,
+      product,
+      comboProduct,
+    });
 
     const populatedBooking = await Booking.findById(bookingCreated._id)
       .populate("product.productId")
-      .populate("comboProduct.comboProductId");
+      .populate({
+        path: "comboProduct.comboProductId",
+        populate: {
+          path: "productId.product",
+          model: "Product",
+        },
+      });
+
+      await User.findByIdAndUpdate(bookingData.userId, {
+        $set: { cartItems: [] },
+      });      
 
     sendResponse(res, 200, "Success", {
       message: "Booking created successfully!",
@@ -110,8 +134,13 @@ bookingController.post("/list", async (req, res) => {
       })
       .populate({
         path: "comboProduct.comboProductId",
-        select: "name productHeroImage pricing",
-      })
+        select: "name productHeroImage pricing productId",
+        populate: {
+          path: "productId.product",
+          model: "Product",
+          select: "name price productHeroImage",
+        },
+      })      
       .sort(sortOption)
       .skip(parseInt(pageNo - 1) * parseInt(pageCount))
       .limit(parseInt(pageCount));
@@ -192,7 +221,14 @@ bookingController.get("/details/:id", async (req, res) => {
     const booking = await Booking.findOne({ _id: id })
       .populate("userId", "firstName lastName email phone")
       .populate("product.productId")
-      .populate("comboProduct.comboProductId")
+      .populate({
+        path: "comboProduct.comboProductId",
+        populate: {
+          path: "productId.product",
+          model: "Product",
+          select: "name price productHeroImage",
+        },
+      })
       .lean();
 
     if (!booking) {
@@ -236,7 +272,14 @@ bookingController.get("/user/:userId", async (req, res) => {
     const booking = await Booking.find({ userId: userId })
       .populate("product.productId")
       .populate("userId")
-      .populate("comboProduct.comboProductId");
+      .populate({
+        path: "comboProduct.comboProductId",
+        populate: {
+          path: "productId.product",
+          model: "Product",
+          select: "name price productHeroImage",
+        },
+      });
 
     if (booking.length > 0) {
       return sendResponse(res, 200, "Success", {
