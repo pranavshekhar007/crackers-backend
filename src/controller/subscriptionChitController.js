@@ -453,8 +453,6 @@ subscriptionChitController.put("/approve/:id", async (req, res) => {
   <p><strong>Enrollment Date:</strong> ${chit.enrolmentDate.toDateString()}</p>
   <p><strong>Monthly Payment Amount:</strong> ₹${chit.monthlyAmount}</p>
   <p><strong>Scheme Duration:</strong> ${chit.totalMonths} months</p>
-  <p><strong>Scheme Start Date:</strong> ${chit.schemeStartDate.toLocaleString('default', { month: 'long', year: 'numeric' })}</p>
-<p><strong>Scheme End Date:</strong> ${chit.schemeEndDate.toLocaleString('default', { month: 'long', year: 'numeric' })}</p>
   <hr/>
   <p>You can now login using these credentials and start your monthly payments.</p>
   <p>Thank you!</p>
