@@ -8,6 +8,7 @@ const cloudinary = require("../utils/cloudinary");
 const upload = require("../utils/multer");
 const auth = require("../utils/auth");
 
+
 addressController.post("/create", async (req, res) => {
   try {
     const addressCreated = await Address.create(req.body);
