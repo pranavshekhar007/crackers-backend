@@ -23,7 +23,7 @@ const bookingSchema = mongoose.Schema({
   },
   signature: {
     type: String,
-    require: true,
+    // require: true,
   },
 
   modeOfPayment: {
