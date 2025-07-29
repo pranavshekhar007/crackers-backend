@@ -91,13 +91,13 @@ const bookingSchema = mongoose.Schema({
     },
   ],
 
-   couponId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Coupon",
-    },
-    couponDiscountValue: {
-      type: Number,
-    },
+  //  couponId: {
+  //     type: mongoose.Schema.Types.ObjectId,
+  //     ref: "Coupon",
+  //   },
+  //   couponDiscountValue: {
+  //     type: Number,
+  //   },
 });
 
 bookingSchema.plugin(timestamps);
